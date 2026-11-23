@@ -1,0 +1,20 @@
+{
+  "model_type": "RandomForestClassifier",
+  "train_samples": 960,
+  "test_samples": 240,
+  "accuracy": 100.0,
+  "precision": 100.0,
+  "recall": 100.0,
+  "f1_score": 100.0,
+  "feature_importances": {
+    "domain_age_days": 43.67,
+    "url_length": 13.16,
+    "missing_contact": 12.35,
+    "missing_policies": 10.66,
+    "is_suspicious_tld": 8.71,
+    "has_bait_keyword": 6.89,
+    "hyphen_count": 3.88,
+    "has_https": 0.68
+  },
+  "disclaimer": "Risk estimate only based on trained feature patterns \u2014 not a guaranteed fraud verdict."
+}

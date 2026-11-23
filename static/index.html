@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FraudLens AI — Fake Website & Store Threat Detector</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc2626'/><text y='.9em' x='50%' text-anchor='middle' font-size='64'>🛡️</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#040508',
+                        panel: '#0b0e18',
+                        panelAlt: '#121726',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #040508;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+        }
+        #cyber-stream {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.42;
+        }
+        .threat-backdrop {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(circle at 78% 36%, rgba(220, 38, 38, 0.28), transparent 42%),
+                radial-gradient(circle at 68% 58%, rgba(37, 99, 235, 0.25), transparent 46%),
+                radial-gradient(circle at 14% 80%, rgba(37, 99, 235, 0.16), transparent 42%);
+        }
+
+        /* Right-side seamless background hacker image */
+        .right-bg-guardian-wrap {
+            position: fixed;
+            top: 40px;
+            right: -30px;
+            width: min(56vw, 720px);
+            height: min(94vh, 860px);
+            pointer-events: none;
+            z-index: 0;
+            -webkit-mask-image:
+                radial-gradient(ellipse 74% 78% at 58% 46%, rgba(0, 0, 0, 0.96) 30%, rgba(0, 0, 0, 0.52) 64%, transparent 95%),
+                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.92) 12%, rgba(0, 0, 0, 0.92) 84%, transparent 100%);
+            mask-image:
+                radial-gradient(ellipse 74% 78% at 58% 46%, rgba(0, 0, 0, 0.96) 30%, rgba(0, 0, 0, 0.52) 64%, transparent 95%),
+                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.92) 12%, rgba(0, 0, 0, 0.92) 84%, transparent 100%);
+            -webkit-mask-composite: source-in;
+            mask-composite: intersect;
+        }
+
+        .right-bg-guardian {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            opacity: 0.64;
+            mix-blend-mode: lighten;
+            filter: contrast(1.15) saturate(1.22) drop-shadow(0 0 30px rgba(59, 130, 246, 0.24));
+            animation: ambientBreathing 5.5s ease-in-out infinite;
+            transform-origin: center 35%;
+        }
+
+        .right-bg-guardian.is-speaking {
+            opacity: 0.86;
+            filter: contrast(1.25) saturate(1.38) drop-shadow(0 0 42px rgba(239, 68, 68, 0.48)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.36));
+            animation: speakingMotion 0.36s ease-in-out infinite alternate;
+        }
+
+        @keyframes ambientBreathing {
+            0%, 100% {
+                transform: translateY(0px) scale(1);
+            }
+            50% {
+                transform: translateY(-7px) scale(1.022);
+            }
+        }
+
+        @keyframes speakingMotion {
+            0% {
+                transform: translateY(0px) scale(1.015) rotate(0.35deg);
+            }
+            100% {
+                transform: translateY(-4px) scale(1.038) rotate(-0.45deg);
+            }
+        }
+
+        .glass-card {
+            background: rgba(11, 14, 24, 0.82);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-red-600 selection:text-white relative">
+
+    <!-- Guardian Voice Audio File -->
+    <audio id="guardian-audio" src="/static/guardian_voice.mp3" preload="auto" playsinline></audio>
+
+    <!-- Base Cyber Glow & Right-Side Blended Hacker Image -->
+    <div class="threat-backdrop"></div>
+    <div class="right-bg-guardian-wrap">
+        <img
+            id="bg-hacker-img"
+            src="/static/hacker.jpg"
+            alt=""
+            aria-hidden="true"
+            class="right-bg-guardian"
+            onerror="this.parentElement.style.display='none';"
+        />
+    </div>
+
+    <!-- Cyber Threat Matrix Stream -->
+    <canvas id="cyber-stream"></canvas>
+
+    <!-- Top Navigation Bar (Single Navigation + Sign In / Sign Up) -->
+    <header class="sticky top-0 z-40 bg-obsidian/85 backdrop-blur-md border-b border-white/15">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Consistent FraudLens AI Brand Badge -->
+            <a href="/" class="flex items-center space-x-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-black to-blue-600 border border-white/20 flex items-center justify-center shadow-lg shadow-blue-600/25 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+                </div>
+                <span class="text-2xl font-extrabold tracking-tight text-white">
+                    Fraud<span class="text-blue-400">Lens</span> <span class="text-red-500">AI</span>
+                </span>
+            </a>
+
+            <nav class="hidden lg:flex items-center space-x-7 text-sm font-medium text-gray-200">
+                <a href="#overview" class="text-white font-semibold border-b-2 border-red-500 pb-0.5">Overview</a>
+                <a href="#how-it-works" class="hover:text-blue-400 transition-colors">How It Works</a>
+                <a href="#protection" class="hover:text-blue-400 transition-colors">Protection</a>
+                <a href="#verdicts" class="hover:text-red-400 transition-colors">Verdicts</a>
+                <a href="#habits" class="hover:text-blue-400 transition-colors">Safety Tips</a>
+            </nav>
+
+            <!-- Sign In / Sign Up Entry Point (Only in Header) -->
+            <div class="hidden md:flex items-center">
+                <a href="/auth" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 hover:brightness-110 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Sign In / Sign Up</span>
+                </a>
+            </div>
+
+            <button onclick="toggleMobileMenu()" class="md:hidden text-white">
+                <i id="menu-icon" class="fa-solid fa-bars text-2xl"></i>
+            </button>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden glass-card border-b border-white/15 px-4 py-4 space-y-2.5">
+            <a href="#overview" class="block py-1.5 text-white font-semibold">Overview</a>
+            <a href="#how-it-works" class="block py-1.5 text-gray-200">How It Works</a>
+            <a href="#protection" class="block py-1.5 text-gray-200">Protection</a>
+            <a href="#verdicts" class="block py-1.5 text-gray-200">Verdicts</a>
+            <a href="#habits" class="block py-1.5 text-gray-200">Safety Tips</a>
+            <div class="pt-3">
+                <a href="/auth" class="w-full py-2.5 text-center block rounded-xl bg-gradient-to-r from-red-600 to-blue-600 text-white text-sm font-semibold">
+                    Sign In / Sign Up
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero & Platform Overview Section (Clean, No Duplicate Section Buttons) -->
+    <section id="overview" class="relative z-10 pt-16 pb-24 lg:pt-24 lg:pb-28">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+
+            <!-- Left Main Overview Copy -->
+            <div class="lg:col-span-7">
+                <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-red-600/20 border border-red-500/50 text-xs font-semibold text-red-200 mb-6">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    <span>Cyber Guardian &amp; Fake Store Intelligence</span>
+                </div>
+
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-white mb-5">
+    Spot Fake Websites
+    <svg class="inline-block w-[0.82em] h-[0.92em] align-[-0.1em] mx-1 text-white" viewBox="0 0 40 48" fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round" aria-label="and">
+        <path d="M33 39L14 17C11.5 14.2 12.2 9.5 16 7.5C19.5 5.7 24.2 7.2 25.5 11.2C26.8 15.2 23.5 19.2 18.5 22.5L10.5 27.8C7.2 30 7.2 35.8 10.8 38.5C14.8 41.5 22.5 41.2 28.5 35.5L35 29" />
+    </svg>
+    <span class="text-blue-400">Verify Safe Stores</span> Before Paying
+</h1>
+
+                <p class="text-gray-200 text-base sm:text-lg leading-relaxed mb-9 max-w-2xl">
+                    FraudLens AI analyzes unfamiliar shopping links, newly registered storefronts, fake social-media ad campaigns,
+                    and unrealistic discount traps—helping you tell whether a website looks
+                    <span class="text-red-400 font-semibold">Fake / High Risk</span> or
+                    <span class="text-blue-400 font-semibold">Secure</span> before you share payment details.
+                </p>
+
+                <!-- Overview Highlights -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl">
+                    <div class="glass-card px-4 py-3.5 rounded-xl border-l-2 border-l-blue-500">
+                        <div class="text-lg sm:text-xl font-extrabold text-white">Multi-Signal</div>
+                        <div class="text-xs text-gray-300 mt-0.5">Domain, SSL &amp; Policy</div>
+                    </div>
+                    <div class="glass-card px-4 py-3.5 rounded-xl border-l-2 border-l-red-500">
+                        <div class="text-lg sm:text-xl font-extrabold text-white">Ad-Trap AI</div>
+                        <div class="text-xs text-gray-300 mt-0.5">Fake Discount Alerts</div>
+                    </div>
+                    <div class="glass-card px-4 py-3.5 rounded-xl border-l-2 border-l-white">
+                        <div class="text-lg sm:text-xl font-extrabold text-white">Clear Verdict</div>
+                        <div class="text-xs text-gray-300 mt-0.5">Risk Score &amp; Guidance</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column intentionally open so the right-side background hacker blends naturally -->
+            <div class="hidden lg:block lg:col-span-5"></div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="relative z-10 py-20 border-t border-white/10 bg-black/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-2xl mb-12">
+                <span class="text-xs font-mono uppercase tracking-widest text-blue-400">Workflow Overview</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-3">How FraudLens AI Protects You</h2>
+                <p class="text-gray-200 text-sm sm:text-base">
+                    A simple three-step security check designed for everyday online shoppers.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-7 rounded-2xl">
+                    <span class="text-xs font-mono font-bold text-blue-400 uppercase">Step 01</span>
+                    <h3 class="text-lg font-bold text-white mt-2 mb-2">Submit Any Store Link</h3>
+                    <p class="text-sm text-gray-200 leading-relaxed">
+                        Paste a product link or store URL you saw on Instagram, WhatsApp, or search ads into your workspace.
+                    </p>
+                </div>
+
+                <div class="glass-card p-7 rounded-2xl">
+                    <span class="text-xs font-mono font-bold text-red-400 uppercase">Step 02</span>
+                    <h3 class="text-lg font-bold text-white mt-2 mb-2">Automated Trust &amp; Risk Audit</h3>
+                    <p class="text-sm text-gray-200 leading-relaxed">
+                        The engine inspects domain age, SSL security, refund policies, contact authenticity, and scam patterns.
+                    </p>
+                </div>
+
+                <div class="glass-card p-7 rounded-2xl">
+                    <span class="text-xs font-mono font-bold text-white uppercase">Step 03</span>
+                    <h3 class="text-lg font-bold text-white mt-2 mb-2">Get Instant Risk Verdict</h3>
+                    <p class="text-sm text-gray-200 leading-relaxed">
+                        Receive a transparent risk score, red-flag breakdown, and clear recommendation before making a payment.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Protection Capabilities Section -->
+    <section id="protection" class="relative z-10 py-20 border-t border-white/10 bg-black/65">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-2xl mb-12">
+                <span class="text-xs font-mono uppercase tracking-widest text-red-400">Threat Detection Pillars</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-2 mb-3">What FraudLens AI Watches For</h2>
+                <p class="text-gray-200 text-sm sm:text-base">
+                    Designed to catch common signs of fake shopping websites and risky links before you complete checkout.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="glass-card p-6 rounded-2xl border-t-2 border-t-blue-500 hover:border-blue-400/50 transition-all">
+                    <div class="text-blue-400 text-xl mb-3"><i class="fa-solid fa-clock"></i></div>
+                    <h3 class="text-base font-bold text-white mb-1.5">Domain Age Check</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Identifies brand-new domains that are often spun up quickly for temporary scam stores.
+                    </p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl border-t-2 border-t-red-500 hover:border-red-400/50 transition-all">
+                    <div class="text-red-400 text-xl mb-3"><i class="fa-solid fa-tags"></i></div>
+                    <h3 class="text-base font-bold text-white mb-1.5">Discount Trap Detection</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Highlights extreme price cuts and aggressive ad bait that lure buyers into risky payments.
+                    </p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl border-t-2 border-t-white hover:border-white/40 transition-all">
+                    <div class="text-white text-xl mb-3"><i class="fa-solid fa-file-contract"></i></div>
+                    <h3 class="text-base font-bold text-white mb-1.5">Store Policy &amp; Contact</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Checks for visible return/refund terms and reachable support details on the storefront.
+                    </p>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl border-t-2 border-t-blue-400 hover:border-blue-300/50 transition-all">
+                    <div class="text-blue-300 text-xl mb-3"><i class="fa-solid fa-shield-virus"></i></div>
+                    <h3 class="text-base font-bold text-white mb-1.5">Watchlist &amp; Risk Scoring</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Matches against reported scam domains and calculates a combined risk score with clear guidance.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Verdict Modes Section -->
+    <section id="verdicts" class="relative z-10 py-20 border-t border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-2xl mx-auto mb-12">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">Clear Decision Verdicts</h2>
+                <p class="text-gray-200 text-sm sm:text-base">
+                    Every scan gives a direct verdict so you know whether to stay away or proceed safely.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-7 rounded-2xl bg-red-950/45 border-2 border-red-500/70">
+                    <div class="text-red-300 font-extrabold text-lg mb-2">
+                        <i class="fa-solid fa-circle-xmark mr-2"></i>Fake / High Risk
+                    </div>
+                    <p class="text-sm text-gray-100 leading-relaxed">
+                        Strong warning signs or watchlist reports found. Avoid paying via UPI, cards, or advance transfers.
+                    </p>
+                </div>
+
+                <div class="p-7 rounded-2xl bg-panel border-2 border-white/50">
+                    <div class="text-white font-extrabold text-lg mb-2">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i>Needs Caution
+                    </div>
+                    <p class="text-sm text-gray-100 leading-relaxed">
+                        Mixed signals or limited store visibility. Double-check reviews and seller details first.
+                    </p>
+                </div>
+
+                <div class="p-7 rounded-2xl bg-blue-950/45 border-2 border-blue-500/70">
+                    <div class="text-blue-300 font-extrabold text-lg mb-2">
+                        <i class="fa-solid fa-circle-check mr-2"></i>Website Looks Secure
+                    </div>
+                    <p class="text-sm text-gray-100 leading-relaxed">
+                        Domain, security, policy, and risk checks look clean—showing standard trust signals are present.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Smart Online Safety Tips Section -->
+    <section id="habits" class="relative z-10 py-20 border-t border-white/10 bg-black/55">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-2xl mb-10">
+                <span class="text-xs font-mono uppercase tracking-widest text-blue-400">Buyer Awareness</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-2">Smart Habits Before You Buy Online</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="glass-card p-6 rounded-xl">
+                    <h3 class="text-sm font-bold text-red-300 mb-1.5">Don't Rush Flash Deals</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Fake ad stores rely on urgency and huge discounts so buyers skip checking domain trust.
+                    </p>
+                </div>
+                <div class="glass-card p-6 rounded-xl">
+                    <h3 class="text-sm font-bold text-blue-300 mb-1.5">Verify Return Policies</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Look for clear refund, return, and customer care details before sharing payment info.
+                    </p>
+                </div>
+                <div class="glass-card p-6 rounded-xl">
+                    <h3 class="text-sm font-bold text-white mb-1.5">Flag Suspicious Stores</h3>
+                    <p class="text-xs text-gray-200 leading-relaxed">
+                        Report fake stores once signed in to help protect other shoppers checking similar links.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Clean Footer (Consistent FraudLens AI Icon, No Duplicate Section Links) -->
+    <footer class="relative z-10 bg-obsidian border-t border-white/15 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-300">
+            <a href="/" class="flex items-center space-x-2.5 group">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-red-600 via-black to-blue-600 border border-white/20 flex items-center justify-center shadow-md shadow-blue-600/20">
+                    <i class="fa-solid fa-shield-halved text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-white text-sm">
+                    Fraud<span class="text-blue-400">Lens</span> <span class="text-red-500">AI</span>
+                </span>
+            </a>
+            <span>Risk guidance only — always verify independently before paying.</span>
+            <span>&copy; 2026 FraudLens AI</span>
+        </div>
+    </footer>
+
+    <script>
+        // Cyber Threat Code Rain
+        const canvas = document.getElementById('cyber-stream');
+        const ctx = canvas.getContext('2d');
+        let width = (canvas.width = window.innerWidth);
+        let height = (canvas.height = window.innerHeight);
+
+        const chars = '01<>/#!?*ALERTLOCKSCAN';
+        const fontSize = 14;
+        let columns = Math.floor(width / fontSize);
+        let drops = Array.from({ length: columns }, () => Math.random() * 40);
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            columns = Math.floor(width / fontSize);
+            drops = Array.from({ length: columns }, () => Math.random() * 40);
+        });
+
+        function drawCyberStream() {
+            ctx.fillStyle = 'rgba(4, 5, 8, 0.12)';
+            ctx.fillRect(0, 0, width, height);
+            ctx.font = `${fontSize}px monospace`;
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillStyle = i % 4 === 0 ? 'rgba(239, 68, 68, 0.55)' : 'rgba(59, 130, 246, 0.45)';
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i] += 0.75;
+            }
+            requestAnimationFrame(drawCyberStream);
+        }
+        drawCyberStream();
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('menu-icon');
+            menu.classList.toggle('hidden');
+            icon.className = menu.classList.contains('hidden') ? 'fa-solid fa-bars text-2xl' : 'fa-solid fa-xmark text-2xl';
+        }
+
+        // Guardian Voice Audio + Speaking Motion on Right-Side Hacker Background
+        const guardianAudio = document.getElementById('guardian-audio');
+        const guardianImg = document.getElementById('bg-hacker-img');
+        let hasStartedAudio = false;
+        let retryInterval = null;
+
+        function setSpeakingState(speaking) {
+            if (guardianImg) {
+                guardianImg.classList.toggle('is-speaking', speaking);
+            }
+        }
+
+        guardianAudio.addEventListener('play', () => {
+            hasStartedAudio = true;
+            setSpeakingState(true);
+            if (retryInterval) {
+                clearInterval(retryInterval);
+                retryInterval = null;
+            }
+        });
+        guardianAudio.addEventListener('ended', () => {
+            setSpeakingState(false);
+        });
+        guardianAudio.addEventListener('pause', () => {
+            setSpeakingState(false);
+        });
+
+        async function startGuardianVoiceAuto() {
+            if (!guardianAudio || hasStartedAudio) return;
+            try {
+                guardianAudio.muted = false;
+                guardianAudio.volume = 1.0;
+                await guardianAudio.play();
+                hasStartedAudio = true;
+            } catch (_) {
+                // Browser holds audible playback until user interacts or sound is permitted
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            startGuardianVoiceAuto();
+            retryInterval = setInterval(() => {
+                if (!hasStartedAudio) {
+                    startGuardianVoiceAuto();
+                } else {
+                    clearInterval(retryInterval);
+                }
+            }, 500);
+        });
+
+        window.addEventListener('load', () => {
+            startGuardianVoiceAuto();
+        });
+
+        ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((evt) => {
+            window.addEventListener(evt, () => {
+                if (!hasStartedAudio) {
+                    startGuardianVoiceAuto();
+                }
+            }, { passive: true });
+        });
+    </script>
+</body>
+</html>
