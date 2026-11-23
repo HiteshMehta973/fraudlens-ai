@@ -8,6 +8,9 @@ from urllib.parse import urlparse
 import os
 import re
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if os.path.basename(os.path.dirname(os.path.abspath(__file__))) == "backend" else os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
 app = FastAPI(title="FraudLens AI Backend", version="1.0.0")
 
 app.add_middleware(
@@ -96,20 +99,28 @@ def _analyze_signals(normalized_url: str, domain: str, ad_text: str, claimed_dis
 
 @app.get("/")
 def serve_home():
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/auth")
 def serve_auth():
-    return FileResponse("static/auth.html")
+    return FileResponse(os.path.join(STATIC_DIR, "auth.html"))
+
+
+@app.get("/dashboard")
+def serve_dashboard():
+    dashboard_path = os.path.join(STATIC_DIR, "dashboard.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/scanner")
 def serve_scanner():
-    scanner_path = os.path.join("static", "scanner.html")
+    scanner_path = os.path.join(STATIC_DIR, "scanner.html")
     if os.path.exists(scanner_path):
         return FileResponse(scanner_path)
-    return FileResponse("static/index.html")
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/api/health")
@@ -132,7 +143,7 @@ def analyze_url(req: UrlScanRequest):
     )
 
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 if __name__ == "__main__":

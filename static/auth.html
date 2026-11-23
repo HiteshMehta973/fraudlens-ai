@@ -342,9 +342,9 @@
                 await setDoc(doc(db, "users", userData.username), userData, { merge: true });
                 localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
 
-                showAlert(`Welcome, ${userData.fullName}! Redirecting to scanner...`, "success");
+                showAlert(`Welcome, ${userData.fullName}! Redirecting to dashboard...`, "success");
                 setTimeout(() => {
-                   window.location.href = '/dashboard';
+                    window.location.href = '/dashboard';
                 }, 1400);
             } catch (error) {
                 console.error("Firebase Auth Error:", error);
@@ -665,9 +665,9 @@
 
                     sendWelcomeEmail(fullName, email);
 
-                    showAlert("Account created & welcome email sent! Redirecting...", "success");
+                    showAlert("Account created & welcome email sent! Redirecting to dashboard...", "success");
                     setTimeout(() => {
-                       window.location.href = '/dashboard';
+                        window.location.href = '/dashboard';
                     }, 1400);
 
                 } else {
@@ -692,7 +692,7 @@
                         email: userData.email
                     }));
 
-                    showAlert(`Welcome back, ${userData.fullName}!`, "success");
+                    showAlert(`Welcome back, ${userData.fullName}! Redirecting to dashboard...`, "success");
                     setTimeout(() => {
                         window.location.href = '/dashboard';
                     }, 1400);
