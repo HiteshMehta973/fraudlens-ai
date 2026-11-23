@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 import os
 import re
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if os.path.basename(os.path.dirname(os.path.abspath(__file__))) == "backend" else os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = FastAPI(title="FraudLens AI Backend", version="1.0.0")
@@ -148,4 +148,4 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
