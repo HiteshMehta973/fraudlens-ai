@@ -1,112 +1,140 @@
-import json
-import os
-from typing import Optional
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import Optional, List
+from urllib.parse import urlparse
+import os
+import re
 
-from app.analyzer import analyze_store
-from app.database import (
-    add_scam_report,
-    count_watchlist_hits,
-    get_recent_scans,
-    get_watchlist,
-    init_db,
-    save_scan,
+app = FastAPI(title="FraudLens AI Backend", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-METRICS_PATH = os.path.join(BASE_DIR, "ml", "model_metrics.json")
 
-app = FastAPI(title="FraudLens AI", version="1.0.0")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-init_db()
-
-
-class ScanRequest(BaseModel):
+class UrlScanRequest(BaseModel):
     url: str
-    insta_handle: Optional[str] = None
-    mrp_price: Optional[float] = None
-    offer_price: Optional[float] = None
+    ad_text: Optional[str] = ""
+    claimed_discount: Optional[str] = ""
 
 
-class ReportRequest(BaseModel):
+class UrlScanResponse(BaseModel):
+    url: str
     domain: str
-    insta_handle: Optional[str] = None
-    reason: str
+    risk_score: int
+    verdict: str
+    summary: str
+    red_flags: List[str]
+    safety_tips: List[str]
+
+
+def _normalize_url(raw_url: str) -> tuple[str, str]:
+    cleaned = (raw_url or "").strip()
+    if not cleaned.startswith(("http://", "https://")):
+        cleaned = "https://" + cleaned
+    parsed = urlparse(cleaned)
+    domain = (parsed.netloc or "").lower().removeprefix("www.")
+    return cleaned, domain
+
+
+def _analyze_signals(normalized_url: str, domain: str, ad_text: str, claimed_discount: str) -> dict:
+    flags = []
+    score = 12
+
+    if not domain or "." not in domain:
+        flags.append("Invalid or incomplete domain format.")
+        score += 45
+
+    if normalized_url.startswith("http://"):
+        flags.append("Uses unencrypted HTTP instead of HTTPS.")
+        score += 20
+
+    suspicious_tlds = (".xyz", ".top", ".click", ".shop", ".live", ".icu", ".buzz", ".gq", ".tk", ".ml")
+    if any(domain.endswith(tld) for tld in suspicious_tlds):
+        flags.append("Uses a low-trust or high-frequency promotional domain extension.")
+        score += 20
+
+    if re.search(r"\d{3,}", domain) or domain.count("-") >= 2:
+        flags.append("Domain contains unusual numbers or multiple hyphens common in lookalike stores.")
+        score += 18
+
+    combined_text = f"{ad_text} {claimed_discount}".lower()
+    urgency_words = ["80% off", "90% off", "flash sale", "hurry", "last chance", "limited stock", "free gift", "clearance"]
+    if any(w in combined_text for w in urgency_words):
+        flags.append("Aggressive urgency or steep discount claims detected.")
+        score += 20
+
+    score = max(0, min(100, score))
+    if score >= 65:
+        verdict = "Fake / High Risk"
+        summary = "Multiple high-risk indicators detected. Avoid sharing UPI, card, or advance payment details."
+    elif score >= 35:
+        verdict = "Needs Caution"
+        summary = "Some suspicious patterns found. Verify store reviews and return policies before ordering."
+    else:
+        verdict = "Website Looks Secure"
+        summary = "No major URL or discount-trap red flags detected in quick check."
+
+    return {
+        "score": score,
+        "verdict": verdict,
+        "summary": summary,
+        "flags": flags or ["No obvious high-risk URL or discount-trap signals found."],
+        "tips": [
+            "Check clear refund, return, and customer support contact details before paying.",
+            "Avoid rushing into steep social-media ad discounts without independent reviews."
+        ]
+    }
 
 
 @app.get("/")
-def serve_index():
-    index_file = os.path.join(STATIC_DIR, "index.html")
-    if os.path.exists(index_file):
-        return FileResponse(index_file)
-    return {"message": "FraudLens AI API is running. Add static/index.html to view the UI."}
+def serve_home():
+    return FileResponse("static/index.html")
 
 
-@app.get("/api/metrics")
-def api_metrics():
-    if not os.path.exists(METRICS_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail="Model metrics not found. Run ml/train_model.py first.",
-        )
-    with open(METRICS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+@app.get("/auth")
+def serve_auth():
+    return FileResponse("static/auth.html")
 
 
-@app.get("/api/history")
-def api_history():
-    return {"scans": get_recent_scans(limit=15)}
+@app.get("/scanner")
+def serve_scanner():
+    scanner_path = os.path.join("static", "scanner.html")
+    if os.path.exists(scanner_path):
+        return FileResponse(scanner_path)
+    return FileResponse("static/index.html")
 
 
-@app.get("/api/watchlist")
-def api_watchlist():
-    return {"reports": get_watchlist(limit=20)}
+@app.get("/api/health")
+def health_check():
+    return {"status": "online", "service": "FraudLens AI"}
 
 
-@app.post("/api/report")
-def api_report(payload: ReportRequest):
-    try:
-        saved = add_scam_report(
-            domain_input=payload.domain,
-            reason=payload.reason,
-            insta_handle=payload.insta_handle,
-        )
-        return {"message": "Added to FraudLens Scam Watchlist.", "report": saved}
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+@app.post("/api/analyze-url", response_model=UrlScanResponse)
+def analyze_url(req: UrlScanRequest):
+    normalized_url, domain = _normalize_url(req.url)
+    result = _analyze_signals(normalized_url, domain, req.ad_text or "", req.claimed_discount or "")
+    return UrlScanResponse(
+        url=normalized_url,
+        domain=domain,
+        risk_score=result["score"],
+        verdict=result["verdict"],
+        summary=result["summary"],
+        red_flags=result["flags"],
+        safety_tips=result["tips"]
+    )
 
 
-@app.post("/api/scan")
-def api_scan(payload: ScanRequest):
-    try:
-        from urllib.parse import urlparse
-        import tldextract
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-        cleaned = payload.url.strip()
-        if not cleaned.startswith(("http://", "https://")):
-            cleaned = "https://" + cleaned
-        parsed = urlparse(cleaned)
-        hostname = (parsed.hostname or "").lower()
-        ext = tldextract.extract(cleaned)
-        domain = f"{ext.domain}.{ext.suffix}".lower() if ext.suffix else hostname
 
-        hits = count_watchlist_hits(domain=domain, insta_handle=payload.insta_handle)
-        result = analyze_store(
-            raw_url=payload.url,
-            insta_handle=payload.insta_handle,
-            mrp_price=payload.mrp_price,
-            offer_price=payload.offer_price,
-            watchlist_hits=hits,
-        )
-        result["scanned_at"] = save_scan(result)
-        return result
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Scan failed: {exc}") from exc
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
