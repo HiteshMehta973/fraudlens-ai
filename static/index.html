@@ -38,8 +38,8 @@
             width: 100vw;
             height: 100vh;
             pointer-events: none;
-            z-index: 1;
-            opacity: 0.42;
+            z-index: 2;
+            opacity: 0.34;
         }
         .threat-backdrop {
             position: fixed;
@@ -56,17 +56,17 @@
         .right-bg-guardian-wrap {
             position: fixed;
             top: 40px;
-            right: -30px;
+            right: -20px;
             width: min(56vw, 720px);
             height: min(94vh, 860px);
             pointer-events: none;
-            z-index: 0;
+            z-index: 1;
             -webkit-mask-image:
-                radial-gradient(ellipse 74% 78% at 58% 46%, rgba(0, 0, 0, 0.96) 30%, rgba(0, 0, 0, 0.52) 64%, transparent 95%),
-                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.92) 12%, rgba(0, 0, 0, 0.92) 84%, transparent 100%);
+                radial-gradient(ellipse 76% 80% at 58% 46%, rgba(0, 0, 0, 0.98) 32%, rgba(0, 0, 0, 0.58) 66%, transparent 96%),
+                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.95) 12%, rgba(0, 0, 0, 0.95) 85%, transparent 100%);
             mask-image:
-                radial-gradient(ellipse 74% 78% at 58% 46%, rgba(0, 0, 0, 0.96) 30%, rgba(0, 0, 0, 0.52) 64%, transparent 95%),
-                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.92) 12%, rgba(0, 0, 0, 0.92) 84%, transparent 100%);
+                radial-gradient(ellipse 76% 80% at 58% 46%, rgba(0, 0, 0, 0.98) 32%, rgba(0, 0, 0, 0.58) 66%, transparent 96%),
+                linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.95) 12%, rgba(0, 0, 0, 0.95) 85%, transparent 100%);
             -webkit-mask-composite: source-in;
             mask-composite: intersect;
         }
@@ -76,16 +76,16 @@
             height: 100%;
             object-fit: cover;
             object-position: center top;
-            opacity: 0.64;
-            mix-blend-mode: lighten;
-            filter: contrast(1.15) saturate(1.22) drop-shadow(0 0 30px rgba(59, 130, 246, 0.24));
+            opacity: 0.78;
+            mix-blend-mode: normal;
+            filter: contrast(1.12) saturate(1.18) drop-shadow(0 0 32px rgba(59, 130, 246, 0.28));
             animation: ambientBreathing 5.5s ease-in-out infinite;
             transform-origin: center 35%;
         }
 
         .right-bg-guardian.is-speaking {
-            opacity: 0.86;
-            filter: contrast(1.25) saturate(1.38) drop-shadow(0 0 42px rgba(239, 68, 68, 0.48)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.36));
+            opacity: 0.92;
+            filter: contrast(1.22) saturate(1.32) drop-shadow(0 0 42px rgba(239, 68, 68, 0.48)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.36));
             animation: speakingMotion 0.36s ease-in-out infinite alternate;
         }
 
@@ -125,10 +125,10 @@
         <img
             id="bg-hacker-img"
             src="/static/hacker.jpg"
-            alt=""
-            aria-hidden="true"
+            alt="FraudLens AI Cyber Guardian"
             class="right-bg-guardian"
-            onerror="this.parentElement.style.display='none';"
+            onload="console.log('Guardian image loaded successfully');"
+            onerror="console.error('Failed to load /static/hacker.jpg — check file path or extension'); this.style.opacity='0';"
         />
     </div>
 
@@ -183,7 +183,7 @@
         </div>
     </header>
 
-    <!-- Hero & Platform Overview Section (Clean, No Duplicate Section Buttons) -->
+    <!-- Hero & Platform Overview Section -->
     <section id="overview" class="relative z-10 pt-16 pb-24 lg:pt-24 lg:pb-28">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
 
@@ -195,12 +195,12 @@
                 </div>
 
                 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-white mb-5">
-    Spot Fake Websites
-    <svg class="inline-block w-[0.82em] h-[0.92em] align-[-0.1em] mx-1 text-white" viewBox="0 0 40 48" fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round" aria-label="and">
-        <path d="M33 39L14 17C11.5 14.2 12.2 9.5 16 7.5C19.5 5.7 24.2 7.2 25.5 11.2C26.8 15.2 23.5 19.2 18.5 22.5L10.5 27.8C7.2 30 7.2 35.8 10.8 38.5C14.8 41.5 22.5 41.2 28.5 35.5L35 29" />
-    </svg>
-    <span class="text-blue-400">Verify Safe Stores</span> Before Paying
-</h1>
+                    Spot Fake Websites
+                    <svg class="inline-block w-[0.82em] h-[0.92em] align-[-0.1em] mx-1 text-white" viewBox="0 0 40 48" fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round" aria-label="and">
+                        <path d="M33 39L14 17C11.5 14.2 12.2 9.5 16 7.5C19.5 5.7 24.2 7.2 25.5 11.2C26.8 15.2 23.5 19.2 18.5 22.5L10.5 27.8C7.2 30 7.2 35.8 10.8 38.5C14.8 41.5 22.5 41.2 28.5 35.5L35 29" />
+                    </svg>
+                    <span class="text-blue-400">Verify Safe Stores</span> Before Paying
+                </h1>
 
                 <p class="text-gray-200 text-base sm:text-lg leading-relaxed mb-9 max-w-2xl">
                     FraudLens AI analyzes unfamiliar shopping links, newly registered storefronts, fake social-media ad campaigns,
@@ -389,7 +389,7 @@
         </div>
     </section>
 
-    <!-- Clean Footer (Consistent FraudLens AI Icon, No Duplicate Section Links) -->
+    <!-- Clean Footer -->
     <footer class="relative z-10 bg-obsidian border-t border-white/15 py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-300">
             <a href="/" class="flex items-center space-x-2.5 group">
