@@ -28,7 +28,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         (function() {
-            emailjs.init("x378TFNPX8-lKa2EA");
+            emailjs.init("Uw5NG5ASS-ib5-dda");
         })();
     </script>
     <style>
@@ -301,13 +301,13 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyA6XeVnSY1HVleGyyW133nhmkQEvC6d9JQ",
-            authDomain: "intervai-f6dcc.firebaseapp.com",
-            projectId: "intervai-f6dcc",
-            storageBucket: "intervai-f6dcc.firebasestorage.app",
-            messagingSenderId: "360105759901",
-            appId: "1:360105759901:web:c18f5f44a134c1c99b3074",
-            measurementId: "G-405F7Q7342"
+            apiKey: "AIzaSyCYOxpfg2_wIvNI7hVOiwkfI3A5do0ojB0",
+            authDomain: "fraudlens-ai-fb27d.firebaseapp.com",
+            projectId: "fraudlens-ai-fb27d",
+            storageBucket: "fraudlens-ai-fb27d.firebasestorage.app",
+            messagingSenderId: "686604330689",
+            appId: "1:686604330689:web:825288062ebf180212d640",
+            measurementId: "G-FX64HFNSRG"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -407,10 +407,11 @@
                 generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 otpExpiryTime = Date.now() + 10 * 60 * 1000;
 
-                await emailjs.send('service_93en4kh', 'template_tv0qjff', {
+                await emailjs.send('service_ge4ta08', 'template_g8uuwjl', {
                     to_name: userName,
                     to_email: targetEmail,
                     email: targetEmail,
+                    otp: generatedOtp,
                     otp_code: generatedOtp
                 });
 
@@ -545,7 +546,7 @@
                     if (window.grecaptcha && recaptchaWidgetId === null) {
                         try {
                             recaptchaWidgetId = grecaptcha.render('recaptchaContainer', {
-                                'sitekey': '6Le0HgMuAAAAAMhQR3ups0eeQ90_hYT7ECrRqGD5',
+                                'sitekey': '6LcctS4uAAAAAGooiXRZAgy5ivMKtZgmNCZxpoi6',
                                 'theme': 'dark'
                             });
                         } catch (e) {
@@ -597,10 +598,11 @@
             const templateParams = {
                 to_name: fullName,
                 to_email: userEmail,
+                email: userEmail,
                 message: `Hi ${fullName},\n\nWelcome to FraudLens AI!\nYour account is ready for checking suspicious links, fake shopping stores, and high-risk discounts before you pay.\n\nStay safe online,\nTeam FraudLens AI`
             };
 
-            emailjs.send('service_93en4kh', 'template_rilq2id', templateParams)
+            emailjs.send('service_ge4ta08', 'template_6o2pavp', templateParams)
                 .then(function(response) {
                     console.log('Welcome email sent!', response.status, response.text);
                 }, function(error) {
