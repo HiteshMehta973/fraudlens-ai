@@ -325,7 +325,44 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        // Google Login: Welcome mail on first Google sign-in only; no welcome mail on repeat Google sign-in
+        // Helper: Check whether this email address has already been used for an account or welcome email
+        async function hasEmailBeenUsedBefore(normalizedEmail) {
+            if (!normalizedEmail) return true;
+
+            const safeDocId = encodeURIComponent(normalizedEmail);
+            const emailTrackerSnap = await getDoc(doc(db, "welcome_emails", safeDocId));
+            if (emailTrackerSnap.exists()) {
+                return true;
+            }
+
+            const allUsersSnap = await getDocs(collection(db, "users"));
+            let foundInUsers = false;
+            allUsersSnap.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.email && data.email.trim().toLowerCase() === normalizedEmail) {
+                    foundInUsers = true;
+                }
+            });
+
+            return foundInUsers;
+        }
+
+        // Helper: Mark email as used so welcome email is never sent again for this email address
+        async function markEmailAsUsed(normalizedEmail, providerName) {
+            if (!normalizedEmail) return;
+            const safeDocId = encodeURIComponent(normalizedEmail);
+            await setDoc(doc(db, "welcome_emails", safeDocId), {
+                email: normalizedEmail,
+                provider: providerName,
+                welcomeEmailSent: true,
+                firstUsedAt: new Date().toISOString()
+            }, { merge: true });
+        }
+
+        window.hasEmailBeenUsedBefore = hasEmailBeenUsedBefore;
+        window.markEmailAsUsed = markEmailAsUsed;
+
+        // Google Login: Send welcome mail only if this email has never been used before
         window.handleGoogleLogin = async function() {
             const btnText = document.getElementById('googleBtnText');
             const spinner = document.getElementById('googleSpinner');
@@ -341,9 +378,11 @@
                 const fullName = user.displayName || "FraudLens User";
                 const email = (user.email || "").trim().toLowerCase();
 
+                const emailAlreadyUsed = await hasEmailBeenUsedBefore(email);
+                const isFirstTimeEmail = !emailAlreadyUsed;
+
                 const userDocRef = doc(db, "users", username);
                 const existingSnap = await getDoc(userDocRef);
-                const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
 
                 const userData = {
                     username,
@@ -361,7 +400,8 @@
                 await setDoc(userDocRef, userData, { merge: true });
                 localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
 
-                if (isFirstTimeGoogleUser && email) {
+                if (isFirstTimeEmail && email) {
+                    await markEmailAsUsed(email, "google");
                     await sendWelcomeEmail(fullName, email);
                     showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting...`, "success");
                 } else {
@@ -432,10 +472,12 @@
                 generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 otpExpiryTime = Date.now() + 10 * 60 * 1000;
 
-              await emailjs.send('service_ge4ta08', 'template_66d7m5l', {
+                await emailjs.send('service_ge4ta08', 'template_g8uuwjl', {
                     to_name: userName,
                     to_email: targetEmail,
-                    otp: generatedOtp
+                    email: targetEmail,
+                    otp: generatedOtp,
+                    otp_code: generatedOtp
                 });
 
                 document.getElementById('otpStep1').classList.add('hidden');
@@ -620,19 +662,22 @@
         }
 
         // Send Welcome Email using EmailJS service
-       async function sendWelcomeEmail(fullName, userEmail) {
+        async function sendWelcomeEmail(fullName, userEmail) {
             const templateParams = {
                 to_name: fullName,
-                to_email: userEmail
+                to_email: userEmail,
+                email: userEmail,
+                message: `Hi ${fullName},\n\nWelcome to FraudLens AI!\nWe're excited to have you on board.\n\nShopping online and checking links from ads or messages can be risky, and FraudLens AI helps you spot fake shopping stores, suspicious domains, and high-risk discount traps before you pay.\n\nHere's what you can do with FraudLens AI:\n- Scan store URLs and promotional links for risk signals.\n- Detect aggressive discounts, urgency traps, and suspicious domains.\n- View clear risk scores, red flags, and safety tips in your dashboard.\n- Track recent scans to shop with greater confidence.\n\nWhether you're verifying a new online store or checking a link shared on social media, FraudLens AI is here to help you stay safe.\n\nBest regards,\nTeam FraudLens AI`
             };
 
             try {
-                const response = await emailjs.send('service_ge4ta08', 'template_wmmqkf6', templateParams);
+                const response = await emailjs.send('service_ge4ta08', 'template_6o2pavp', templateParams);
                 console.log('Welcome email successfully sent!', response.status, response.text);
             } catch (error) {
                 console.error('Failed to send welcome email.', error);
             }
         }
+
         // Manual Sign Up & Sign In with Cloud Firestore
         async function handleAuthSubmit(event) {
             event.preventDefault();
@@ -675,6 +720,9 @@
                         return;
                     }
 
+                    const emailAlreadyUsed = await window.hasEmailBeenUsedBefore(email);
+                    const isFirstTimeEmail = !emailAlreadyUsed;
+
                     const newUser = {
                         username,
                         fullName,
@@ -687,9 +735,14 @@
                     await setDoc(userDocRef, newUser);
                     localStorage.setItem('fraudlens_current_user', JSON.stringify({ username, fullName, email }));
 
-                    await sendWelcomeEmail(fullName, email);
+                    if (isFirstTimeEmail && email) {
+                        await window.markEmailAsUsed(email, "signup");
+                        await sendWelcomeEmail(fullName, email);
+                        showAlert("Account created & welcome email sent successfully!", "success");
+                    } else {
+                        showAlert("Account created! (Welcome email already sent previously for this email.)", "success");
+                    }
 
-                    showAlert("Account created & welcome email sent successfully!", "success");
                     setTimeout(() => {
                         window.location.href = "/dashboard";
                     }, 1500);
