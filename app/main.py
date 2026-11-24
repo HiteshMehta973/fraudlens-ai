@@ -1,5 +1,6 @@
 import os
 import sys
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -19,7 +20,35 @@ try:
 except ImportError:
     analyze_store = None
 
-app = FastAPI(title="FraudLens AI Backend", version="2.0.0")
+try:
+    from app.database import (
+        add_scam_report,
+        count_watchlist_hits,
+        get_recent_scans,
+        get_watchlist,
+        init_db,
+        normalize_domain,
+        save_scan,
+    )
+except ImportError:
+    from database import (
+        add_scam_report,
+        count_watchlist_hits,
+        get_recent_scans,
+        get_watchlist,
+        init_db,
+        normalize_domain,
+        save_scan,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="FraudLens AI Backend", version="2.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,9 +65,15 @@ class StoreScanRequest(BaseModel):
     insta_handle: Optional[str] = None
     mrp_price: Optional[float] = None
     offer_price: Optional[float] = None
-    watchlist_hits: int = 0
+    watchlist_hits: Optional[int] = None
     ad_text: Optional[str] = ""
     claimed_discount: Optional[str] = ""
+
+
+class ScamReportRequest(BaseModel):
+    domain: str
+    insta_handle: Optional[str] = ""
+    reason: str
 
 
 class StoreCheckItem(BaseModel):
@@ -60,6 +95,7 @@ class StoreScanResponse(BaseModel):
     advice: str
     checks: List[StoreCheckItem] = []
     disclaimer: str = "Automated risk assessment—not a 100% legal or financial guarantee."
+    scanned_at: Optional[str] = None
 
 
 @app.get("/")
@@ -109,18 +145,52 @@ def api_analyze_url(req: StoreScanRequest) -> Dict[str, Any]:
             detail="analyzer.py could not be imported. Ensure analyzer.py is in the project root.",
         )
 
+    init_db()
+    domain_guess = normalize_domain(target_url)
+    db_hits = count_watchlist_hits(domain_guess, req.insta_handle)
+    effective_hits = max(db_hits, int(req.watchlist_hits or 0))
+
     try:
-        return analyze_store(
+        result = analyze_store(
             raw_url=target_url,
             insta_handle=req.insta_handle,
             mrp_price=req.mrp_price,
             offer_price=req.offer_price,
-            watchlist_hits=req.watchlist_hits,
+            watchlist_hits=effective_hits,
         )
+        scanned_at = save_scan(result)
+        result["scanned_at"] = scanned_at
+        return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Store analysis failed: {str(exc)}") from exc
+
+
+@app.get("/api/scans")
+def api_get_scans(limit: int = 15):
+    init_db()
+    return {"scans": get_recent_scans(limit=limit)}
+
+
+@app.get("/api/watchlist")
+def api_get_watchlist(limit: int = 20):
+    init_db()
+    return {"watchlist": get_watchlist(limit=limit)}
+
+
+@app.post("/api/report-scam")
+def api_report_scam(req: ScamReportRequest):
+    init_db()
+    try:
+        saved = add_scam_report(
+            domain_input=req.domain,
+            reason=req.reason,
+            insta_handle=req.insta_handle,
+        )
+        return {"status": "reported", "report": saved}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
