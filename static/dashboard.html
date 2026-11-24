@@ -79,7 +79,6 @@
     </style>
 </head>
 <body class="antialiased selection:bg-red-600 selection:text-white relative min-h-screen">
-    <!-- FraudLens AI Backdrop & Cyber Code Stream -->
     <div id="threat-backdrop" class="threat-backdrop"></div>
     <canvas id="cyber-stream"></canvas>
 
@@ -120,7 +119,7 @@
                 </div>
                 <h1 class="text-2xl sm:text-4xl font-extrabold text-white">Store &amp; Link Threat Scanner</h1>
                 <p class="text-sm text-gray-300 mt-1">
-                    Analyze store URLs, social ad offers, and discount traps to spot fraud signals before checkout.
+                    Analyze store URLs, Instagram handles, and MRP vs. offer pricing to detect fake stores before paying.
                 </p>
             </div>
 
@@ -143,32 +142,20 @@
         <!-- Scanner Input + Dynamic Verdict Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            <!-- Left: Scanner Panel (Single + Bulk Mode) -->
-            <div class="lg:col-span-6 glass-card p-6 sm:p-7 rounded-2xl space-y-5">
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3.5">
+            <!-- Left: Scanner Form (Matches analyze_store inputs) -->
+            <form id="scan-form" onsubmit="runUrlScan(event)" class="lg:col-span-6 glass-card p-6 sm:p-7 rounded-2xl space-y-4">
+                <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-magnifying-glass-shield text-blue-400"></i>
                         <span>Analyze Store Link</span>
                     </h2>
-                    <div class="flex rounded-lg bg-obsidian p-1 border border-white/10 text-xs">
-                        <button type="button" id="modeSingleBtn" onclick="switchScanMode('single')" class="px-3 py-1 rounded-md font-semibold bg-gradient-to-r from-red-600 to-blue-600 text-white cursor-pointer">
-                            Single Scan
-                        </button>
-                        <button type="button" id="modeBulkBtn" onclick="switchScanMode('bulk')" class="px-3 py-1 rounded-md font-semibold text-gray-300 hover:text-white cursor-pointer">
-                            Bulk URLs
-                        </button>
-                    </div>
+                    <span id="live-domain-preview" class="text-xs font-mono text-blue-300 truncate max-w-[190px]">No URL entered</span>
                 </div>
 
-                <!-- Single Scan Form -->
-                <form id="scan-form" onsubmit="runUrlScan(event)" class="space-y-4">
-                    <div class="flex items-center justify-between text-xs">
-                        <label for="target-url" class="font-semibold uppercase tracking-wider text-gray-300">
-                            Website / Store URL *
-                        </label>
-                        <span id="live-domain-preview" class="font-mono text-blue-300 truncate max-w-[190px]">No URL entered</span>
-                    </div>
-
+                <div>
+                    <label for="target-url" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                        Website / Store URL *
+                    </label>
                     <input
                         id="target-url"
                         type="text"
@@ -177,68 +164,60 @@
                         placeholder="https://example-flash-store.xyz/deal"
                         class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-white/15 focus:border-blue-400 focus:outline-none text-sm text-white placeholder-gray-500 transition-colors"
                     />
+                </div>
 
+                <div>
+                    <label for="insta-handle" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                        Instagram Handle (Optional)
+                    </label>
+                    <input
+                        id="insta-handle"
+                        type="text"
+                        placeholder="@store_handle"
+                        class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-white/15 focus:border-blue-400 focus:outline-none text-sm text-white placeholder-gray-500 transition-colors"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="claimed-discount" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
-                            Claimed Offer / Discount
+                        <label for="mrp-price" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                            MRP Price (₹)
                         </label>
                         <input
-                            id="claimed-discount"
-                            type="text"
-                            placeholder="e.g., 90% Off Clearance Sale"
+                            id="mrp-price"
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="e.g., 2999"
                             class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-white/15 focus:border-blue-400 focus:outline-none text-sm text-white placeholder-gray-500 transition-colors"
                         />
                     </div>
-
                     <div>
-                        <label for="ad-text" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
-                            Ad / Message Copy (Optional)
+                        <label for="offer-price" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                            Offer Price (₹)
                         </label>
-                        <textarea
-                            id="ad-text"
-                            rows="3"
-                            placeholder="Paste Instagram ad text, WhatsApp forward, or checkout urgency message..."
+                        <input
+                            id="offer-price"
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="e.g., 299"
                             class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-white/15 focus:border-blue-400 focus:outline-none text-sm text-white placeholder-gray-500 transition-colors"
-                        ></textarea>
+                        />
                     </div>
+                </div>
 
-                    <button
-                        id="scan-btn"
-                        type="submit"
-                        class="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 hover:brightness-110 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                        <i class="fa-solid fa-shield-virus"></i>
-                        <span>Scan Website Risk</span>
-                    </button>
-                </form>
+                <button
+                    id="scan-btn"
+                    type="submit"
+                    class="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 hover:brightness-110 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                >
+                    <i class="fa-solid fa-shield-virus"></i>
+                    <span>Scan Website Risk</span>
+                </button>
+            </form>
 
-                <!-- Bulk URL Scanner -->
-                <form id="bulk-scan-form" onsubmit="runBulkScan(event)" class="hidden space-y-4">
-                    <div>
-                        <label for="bulk-urls" class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
-                            Paste Multiple URLs (One per line) *
-                        </label>
-                        <textarea
-                            id="bulk-urls"
-                            rows="6"
-                            required
-                            placeholder="https://store-one.xyz/sale&#10;https://www.amazon.in&#10;http://limited-offer-deal.top/cart"
-                            class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-white/15 focus:border-blue-400 focus:outline-none text-sm text-white placeholder-gray-500 font-mono transition-colors"
-                        ></textarea>
-                    </div>
-
-                    <button
-                        id="bulk-scan-btn"
-                        type="submit"
-                        class="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 hover:brightness-110 text-white font-bold text-sm shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span>Scan All URLs</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- Right: Dynamic Verdict & Signal Breakdown -->
+            <!-- Right: Dynamic Verdict & Checks Breakdown -->
             <div id="result-panel" class="lg:col-span-6 glass-card p-6 sm:p-7 rounded-2xl space-y-5">
                 <div class="flex items-center justify-between border-b border-white/10 pb-4">
                     <div>
@@ -248,6 +227,7 @@
                     <div class="text-right">
                         <div class="text-xs text-gray-400">Risk Score</div>
                         <div id="risk-score-display" class="text-3xl font-extrabold text-blue-400">--/100</div>
+                        <div id="ml-prob-label" class="text-[11px] font-mono text-gray-400 mt-0.5">ML Scam Prob: --%</div>
                     </div>
                 </div>
 
@@ -263,47 +243,45 @@
                     </div>
                 </div>
 
-                <!-- Signal Breakdown Badges -->
-                <div id="signal-pills" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <!-- Metadata Strip -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
                     <div class="p-2.5 rounded-xl bg-obsidian/80 border border-white/10">
                         <div class="text-[10px] text-gray-400 uppercase">Domain</div>
-                        <div id="sig-domain" class="font-semibold text-white truncate mt-0.5">—</div>
+                        <div id="meta-domain" class="font-semibold text-white truncate mt-0.5">—</div>
                     </div>
                     <div class="p-2.5 rounded-xl bg-obsidian/80 border border-white/10">
-                        <div class="text-[10px] text-gray-400 uppercase">Protocol</div>
-                        <div id="sig-protocol" class="font-semibold text-blue-300 mt-0.5">—</div>
+                        <div class="text-[10px] text-gray-400 uppercase">Resolved IP</div>
+                        <div id="meta-ip" class="font-mono text-blue-300 truncate mt-0.5">—</div>
                     </div>
-                    <div class="p-2.5 rounded-xl bg-obsidian/80 border border-white/10">
-                        <div class="text-[10px] text-gray-400 uppercase">Offer Hook</div>
-                        <div id="sig-offer" class="font-semibold text-gray-200 truncate mt-0.5">—</div>
-                    </div>
-                    <div class="p-2.5 rounded-xl bg-obsidian/80 border border-white/10">
-                        <div class="text-[10px] text-gray-400 uppercase">Ad Copy</div>
-                        <div id="sig-ad" class="font-semibold text-gray-200 truncate mt-0.5">—</div>
+                    <div class="p-2.5 rounded-xl bg-obsidian/80 border border-white/10 col-span-2 sm:col-span-1">
+                        <div class="text-[10px] text-gray-400 uppercase">Instagram</div>
+                        <div id="meta-ig" class="font-semibold text-gray-200 truncate mt-0.5">—</div>
                     </div>
                 </div>
 
-                <p id="verdict-summary" class="text-sm text-gray-200 leading-relaxed">
-                    Submit a URL on the left to inspect domain structure, link security, discount urgency, and buyer safety guidance.
-                </p>
-
+                <!-- Safety Advice -->
                 <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-red-400 mb-2.5">Detected Red Flags</h3>
-                    <ul id="red-flags-list" class="space-y-2 text-xs sm:text-sm text-gray-200">
-                        <li class="p-3 rounded-xl bg-white/5 border border-white/10 text-gray-400">No scan results yet.</li>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 mb-2">Safety Guidance</h3>
+                    <p id="verdict-advice" class="p-3.5 rounded-xl bg-blue-950/30 border border-blue-500/25 text-sm text-gray-200 leading-relaxed">
+                        Submit a store URL on the left to run RDAP domain age, SSL/policy inspection, and ML threat scoring.
+                    </p>
+                </div>
+
+                <!-- Checks Breakdown -->
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-300 mb-2.5">Security &amp; Store Checks</h3>
+                    <ul id="checks-list" class="space-y-2 text-xs sm:text-sm text-gray-200">
+                        <li class="p-3 rounded-xl bg-white/5 border border-white/10 text-gray-400">No scan checks run yet.</li>
                     </ul>
                 </div>
 
-                <div>
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-blue-400 mb-2.5">Safety Recommendations</h3>
-                    <ul id="safety-tips-list" class="space-y-2 text-xs sm:text-sm text-gray-200">
-                        <li class="p-3 rounded-xl bg-blue-950/30 border border-blue-500/25">Always verify official store contact details and refund policies before paying.</li>
-                    </ul>
+                <div id="disclaimer-text" class="text-[11px] text-gray-400 pt-1">
+                    Automated risk assessment—not a 100% legal or financial guarantee.
                 </div>
             </div>
         </div>
 
-        <!-- Recent Scan History with Filter & CSV Export -->
+        <!-- Recent Scan History -->
         <section class="glass-card p-6 sm:p-7 rounded-2xl space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 class="text-lg font-bold text-white">Recent Scans</h2>
@@ -330,7 +308,7 @@
         </section>
     </main>
 
-    <!-- Cyber Threat Code Rain (Matches FraudLens AI Login & Home Backdrop) -->
+    <!-- Cyber Threat Code Rain -->
     <script>
         const canvas = document.getElementById('cyber-stream');
         const ctx = canvas.getContext('2d');
@@ -369,7 +347,7 @@
         drawCyberStream();
     </script>
 
-    <!-- Scanner Application Logic -->
+    <!-- Scanner Logic Connected to analyzer.py Endpoint -->
     <script>
         const HISTORY_KEY = 'fraudlens_recent_scans_v1';
 
@@ -393,25 +371,6 @@
             localStorage.removeItem('fraudlens_user');
             localStorage.removeItem('user_email');
             window.location.href = '/auth';
-        }
-
-        function switchScanMode(mode) {
-            const singleForm = document.getElementById('scan-form');
-            const bulkForm = document.getElementById('bulk-scan-form');
-            const singleBtn = document.getElementById('modeSingleBtn');
-            const bulkBtn = document.getElementById('modeBulkBtn');
-
-            if (mode === 'single') {
-                singleForm.classList.remove('hidden');
-                bulkForm.classList.add('hidden');
-                singleBtn.className = 'px-3 py-1 rounded-md font-semibold bg-gradient-to-r from-red-600 to-blue-600 text-white cursor-pointer';
-                bulkBtn.className = 'px-3 py-1 rounded-md font-semibold text-gray-300 hover:text-white cursor-pointer';
-            } else {
-                singleForm.classList.add('hidden');
-                bulkForm.classList.remove('hidden');
-                bulkBtn.className = 'px-3 py-1 rounded-md font-semibold bg-gradient-to-r from-red-600 to-blue-600 text-white cursor-pointer';
-                singleBtn.className = 'px-3 py-1 rounded-md font-semibold text-gray-300 hover:text-white cursor-pointer';
-            }
         }
 
         function updateLiveDomainPreview() {
@@ -470,35 +429,35 @@
             }
         }
 
-        function renderScanResult(data, meta = {}) {
+        function renderScanResult(data) {
             const panel = document.getElementById('result-panel');
             const titleEl = document.getElementById('verdict-title');
             const scoreEl = document.getElementById('risk-score-display');
+            const mlProbEl = document.getElementById('ml-prob-label');
             const meterEl = document.getElementById('risk-meter-bar');
-            const summaryEl = document.getElementById('verdict-summary');
-            const flagsEl = document.getElementById('red-flags-list');
-            const tipsEl = document.getElementById('safety-tips-list');
+            const adviceEl = document.getElementById('verdict-advice');
+            const checksEl = document.getElementById('checks-list');
+            const disclaimerEl = document.getElementById('disclaimer-text');
 
             const scoreNum = Math.max(0, Math.min(100, Number(data.risk_score ?? 0)));
-            titleEl.textContent = data.verdict;
+            titleEl.textContent = data.verdict || 'Scan Complete';
             scoreEl.textContent = `${scoreNum}/100`;
             meterEl.style.width = `${scoreNum}%`;
-            summaryEl.textContent = `${data.summary} (${data.url})`;
+
+            if (typeof data.ml_scam_probability === 'number') {
+                mlProbEl.textContent = `ML Scam Prob: ${data.ml_scam_probability}%`;
+            } else {
+                mlProbEl.textContent = 'ML Scam Prob: N/A';
+            }
+
+            document.getElementById('meta-domain').textContent = data.domain || data.url || '—';
+            document.getElementById('meta-ip').textContent = data.ip || '—';
+            document.getElementById('meta-ig').textContent = data.insta_handle ? `@${data.insta_handle}` : 'None';
+
+            adviceEl.textContent = data.advice || 'Review store details before completing any payment.';
+            if (data.disclaimer) disclaimerEl.textContent = data.disclaimer;
+
             applyThreatTheme(data.verdict);
-
-            // Update signal pills
-            let host = data.domain || data.url;
-            let protocolLabel = /^https:\/\//i.test(data.url) ? 'HTTPS' : 'HTTP / Plain';
-            try {
-                const parsed = new URL(/^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`);
-                host = parsed.hostname.toLowerCase();
-                protocolLabel = parsed.protocol.replace(':', '').toUpperCase();
-            } catch (_) {}
-
-            document.getElementById('sig-domain').textContent = host || '—';
-            document.getElementById('sig-protocol').textContent = protocolLabel;
-            document.getElementById('sig-offer').textContent = meta.discount || 'Not specified';
-            document.getElementById('sig-ad').textContent = meta.adText ? 'Provided' : 'None';
 
             panel.classList.remove('animate-result');
             void panel.offsetWidth;
@@ -515,21 +474,44 @@
                 scoreEl.className = 'text-3xl font-extrabold text-sky-400';
             }
 
-            const flags = data.red_flags && data.red_flags.length ? data.red_flags : ['No obvious red flags found.'];
-            flagsEl.innerHTML = flags.map(f =>
-                `<li class="p-3 rounded-xl bg-red-950/30 border border-red-500/30 flex items-start gap-2.5">
-                    <i class="fa-solid fa-triangle-exclamation text-red-400 mt-0.5"></i>
-                    <span>${f}</span>
-                </li>`
-            ).join('');
+            const checks = Array.isArray(data.checks) ? data.checks : [];
+            if (!checks.length) {
+                checksEl.innerHTML = '<li class="p-3 rounded-xl bg-white/5 border border-white/10 text-gray-400">No individual check items returned.</li>';
+                return;
+            }
 
-            const tips = data.safety_tips && data.safety_tips.length ? data.safety_tips : ['Verify store reviews before paying.'];
-            tipsEl.innerHTML = tips.map(t =>
-                `<li class="p-3 rounded-xl bg-blue-950/30 border border-blue-500/25 flex items-start gap-2.5">
-                    <i class="fa-solid fa-shield-check text-blue-400 mt-0.5"></i>
-                    <span>${t}</span>
-                </li>`
-            ).join('');
+            checksEl.innerHTML = checks.map(c => {
+                const status = (c.status || 'SAFE').toUpperCase();
+                let boxClass = 'bg-blue-950/25 border-sky-400/25';
+                let badgeClass = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
+                let iconClass = 'fa-circle-check text-sky-400';
+
+                if (status === 'DANGER') {
+                    boxClass = 'bg-red-950/30 border-red-500/35';
+                    badgeClass = 'bg-red-500/20 text-red-300 border-red-500/40';
+                    iconClass = 'fa-triangle-exclamation text-red-400';
+                } else if (status === 'WARNING') {
+                    boxClass = 'bg-amber-950/25 border-amber-400/30';
+                    badgeClass = 'bg-amber-500/20 text-amber-200 border-amber-400/40';
+                    iconClass = 'fa-circle-exclamation text-amber-300';
+                }
+
+                const ptsText = c.points ? ` (+${c.points})` : '';
+                return `
+                    <li class="p-3.5 rounded-xl border ${boxClass} flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-2.5 min-w-0">
+                            <i class="fa-solid ${iconClass} mt-0.5 shrink-0"></i>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-white">${c.title}</div>
+                                <div class="text-xs text-gray-300 mt-0.5">${c.detail || ''}</div>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono border shrink-0 ${badgeClass}">
+                            ${status}${ptsText}
+                        </span>
+                    </li>
+                `;
+            }).join('');
         }
 
         function inspectFromHistory(index) {
@@ -578,13 +560,16 @@
         function exportHistoryCsv() {
             const items = loadHistory();
             if (!items.length) return;
-            const header = ['URL', 'Domain', 'Risk Score', 'Verdict', 'Summary'];
+            const header = ['URL', 'Domain', 'IP', 'Instagram', 'Risk Score', 'ML Scam Prob (%)', 'Verdict', 'Advice'];
             const rows = items.map(i => [
                 `"${String(i.url || '').replace(/"/g, '""')}"`,
                 `"${String(i.domain || '').replace(/"/g, '""')}"`,
+                `"${String(i.ip || '').replace(/"/g, '""')}"`,
+                `"${String(i.insta_handle || '').replace(/"/g, '""')}"`,
                 i.risk_score ?? 0,
+                i.ml_scam_probability ?? '',
                 `"${String(i.verdict || '').replace(/"/g, '""')}"`,
-                `"${String(i.summary || '').replace(/"/g, '""')}"`
+                `"${String(i.advice || '').replace(/"/g, '""')}"`
             ].join(','));
             const blob = new Blob([[header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -595,132 +580,66 @@
             URL.revokeObjectURL(url);
         }
 
-        function fallbackScan(rawUrl, discount, adText) {
-            let host = rawUrl;
-            try {
-                const withProto = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
-                host = new URL(withProto).hostname.toLowerCase();
-            } catch (_) {}
-
-            let score = 15;
-            const flags = [];
-            const tips = [];
-
-            if (!/^https:\/\//i.test(rawUrl)) {
-                score += 18;
-                flags.push('Link does not use HTTPS encryption.');
-            }
-            if (/\.(xyz|top|click|shop|tk|ml|ga|cf|gq|buzz)$/i.test(host)) {
-                score += 25;
-                flags.push('High-frequency or promotional top-level domain detected.');
-            }
-            const combined = `${discount} ${adText} ${rawUrl}`.toLowerCase();
-            if (/(80%|85%|90%|95%|flash|clearance|hurry|upi|advance)/i.test(combined)) {
-                score += 22;
-                flags.push('Aggressive discount or urgency wording detected in offer or ad copy.');
-            }
-
-            if (score >= 60) {
-                tips.push('Avoid advance UPI or card payments on unfamiliar promotional stores.');
-            } else if (score >= 30) {
-                tips.push('Verify return policy and customer support details before checkout.');
-            } else {
-                tips.push('Standard trust signals look reasonable; verify order details before paying.');
-            }
-
-            score = Math.min(98, score);
-            const verdict = score >= 60 ? 'Fake / High Risk' : score >= 30 ? 'Needs Caution' : 'Website Looks Secure';
-            const summary = verdict === 'Fake / High Risk'
-                ? 'Strong fraud or urgency warning signs were found for this link.'
-                : verdict === 'Needs Caution'
-                    ? 'Some cautionary signals were detected; verify seller details before paying.'
-                    : 'No major warning signs stood out in this scan.';
-
-            return {
-                url: rawUrl,
-                domain: host,
-                risk_score: score,
-                verdict,
-                summary,
-                red_flags: flags,
-                safety_tips: tips
-            };
-        }
-
-        async function analyzeSingleItem(urlVal, discountVal, adTextVal) {
-            try {
-                const res = await fetch('/api/analyze-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        url: urlVal,
-                        claimed_discount: discountVal,
-                        ad_text: adTextVal
-                    })
-                });
-                if (!res.ok) throw new Error('Scan request failed');
-                return await res.json();
-            } catch (_) {
-                return fallbackScan(urlVal, discountVal, adTextVal);
-            }
-        }
-
         async function runUrlScan(event) {
             event.preventDefault();
             const btn = document.getElementById('scan-btn');
             const statusText = document.getElementById('engine-status-text');
-            const urlVal = document.getElementById('target-url').value.trim();
-            const discountVal = document.getElementById('claimed-discount').value.trim();
-            const adTextVal = document.getElementById('ad-text').value.trim();
+
+            const rawUrl = document.getElementById('target-url').value.trim();
+            const instaHandle = document.getElementById('insta-handle').value.trim();
+            const mrpRaw = document.getElementById('mrp-price').value.trim();
+            const offerRaw = document.getElementById('offer-price').value.trim();
+
+            const payload = {
+                raw_url: rawUrl,
+                url: rawUrl,
+                insta_handle: instaHandle || null,
+                mrp_price: mrpRaw ? Number(mrpRaw) : null,
+                offer_price: offerRaw ? Number(offerRaw) : null
+            };
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Scanning...</span>';
-            statusText.textContent = 'Analyzing Threat Signals...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Analyzing Store...</span>';
+            statusText.textContent = 'Running Threat & ML Analysis...';
 
-            const data = await analyzeSingleItem(urlVal, discountVal, adTextVal);
-            renderScanResult(data, { discount: discountVal, adText: adTextVal });
+            try {
+                const res = await fetch('/api/analyze-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || data.error || 'Scan request failed');
+                }
 
-            const history = loadHistory();
-            history.unshift(data);
-            saveHistory(history);
-            renderHistory();
-
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-shield-virus"></i><span>Scan Website Risk</span>';
-        }
-
-        async function runBulkScan(event) {
-            event.preventDefault();
-            const btn = document.getElementById('bulk-scan-btn');
-            const statusText = document.getElementById('engine-status-text');
-            const lines = document.getElementById('bulk-urls').value
-                .split(/\r?\n/)
-                .map(l => l.trim())
-                .filter(Boolean);
-
-            if (!lines.length) return;
-
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Scanning ${lines.length} URLs...</span>`;
-            statusText.textContent = 'Running Bulk URL Inspection...';
-
-            const history = loadHistory();
-            let latestResult = null;
-
-            for (const line of lines) {
-                const resItem = await analyzeSingleItem(line, '', '');
-                history.unshift(resItem);
-                latestResult = resItem;
+                renderScanResult(data);
+                const history = loadHistory();
+                history.unshift(data);
+                saveHistory(history);
+                renderHistory();
+            } catch (err) {
+                renderScanResult({
+                    url: rawUrl,
+                    domain: rawUrl,
+                    ip: '—',
+                    insta_handle: instaHandle.replace(/^@/, ''),
+                    risk_score: 0,
+                    verdict: 'Needs Caution',
+                    advice: err.message || 'Could not complete analysis via backend.',
+                    checks: [
+                        {
+                            title: 'Scanner Request Error',
+                            status: 'WARNING',
+                            detail: err.message || 'Check backend /api/analyze-url endpoint and network connection.',
+                            points: 0
+                        }
+                    ]
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-shield-virus"></i><span>Scan Website Risk</span>';
             }
-
-            saveHistory(history);
-            renderHistory();
-            if (latestResult) {
-                renderScanResult(latestResult);
-            }
-
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-layer-group"></i><span>Scan All URLs</span>';
         }
 
         hydrateUserBadge();

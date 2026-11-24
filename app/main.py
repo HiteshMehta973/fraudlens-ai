@@ -1,17 +1,25 @@
-from fastapi import FastAPI
+import os
+import sys
+from typing import Any, Dict, List, Optional
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, List
-from urllib.parse import urlparse
-import os
-import re
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-app = FastAPI(title="FraudLens AI Backend", version="1.0.0")
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+try:
+    from analyzer import analyze_store
+except ImportError:
+    analyze_store = None
+
+app = FastAPI(title="FraudLens AI Backend", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,79 +30,36 @@ app.add_middleware(
 )
 
 
-class UrlScanRequest(BaseModel):
-    url: str
+class StoreScanRequest(BaseModel):
+    raw_url: Optional[str] = None
+    url: Optional[str] = None
+    insta_handle: Optional[str] = None
+    mrp_price: Optional[float] = None
+    offer_price: Optional[float] = None
+    watchlist_hits: int = 0
     ad_text: Optional[str] = ""
     claimed_discount: Optional[str] = ""
 
 
-class UrlScanResponse(BaseModel):
+class StoreCheckItem(BaseModel):
+    title: str
+    status: str
+    detail: str
+    points: int = 0
+
+
+class StoreScanResponse(BaseModel):
     url: str
     domain: str
+    ip: str = "—"
+    insta_handle: str = ""
     risk_score: int
+    ml_scam_probability: Optional[float] = None
     verdict: str
-    summary: str
-    red_flags: List[str]
-    safety_tips: List[str]
-
-
-def _normalize_url(raw_url: str) -> tuple[str, str]:
-    cleaned = (raw_url or "").strip()
-    if not cleaned.startswith(("http://", "https://")):
-        cleaned = "https://" + cleaned
-    parsed = urlparse(cleaned)
-    domain = (parsed.netloc or "").lower().removeprefix("www.")
-    return cleaned, domain
-
-
-def _analyze_signals(normalized_url: str, domain: str, ad_text: str, claimed_discount: str) -> dict:
-    flags = []
-    score = 12
-
-    if not domain or "." not in domain:
-        flags.append("Invalid or incomplete domain format.")
-        score += 45
-
-    if normalized_url.startswith("http://"):
-        flags.append("Uses unencrypted HTTP instead of HTTPS.")
-        score += 20
-
-    suspicious_tlds = (".xyz", ".top", ".click", ".shop", ".live", ".icu", ".buzz", ".gq", ".tk", ".ml")
-    if any(domain.endswith(tld) for tld in suspicious_tlds):
-        flags.append("Uses a low-trust or high-frequency promotional domain extension.")
-        score += 20
-
-    if re.search(r"\d{3,}", domain) or domain.count("-") >= 2:
-        flags.append("Domain contains unusual numbers or multiple hyphens common in lookalike stores.")
-        score += 18
-
-    combined_text = f"{ad_text} {claimed_discount}".lower()
-    urgency_words = ["80% off", "90% off", "flash sale", "hurry", "last chance", "limited stock", "free gift", "clearance"]
-    if any(w in combined_text for w in urgency_words):
-        flags.append("Aggressive urgency or steep discount claims detected.")
-        score += 20
-
-    score = max(0, min(100, score))
-    if score >= 65:
-        verdict = "Fake / High Risk"
-        summary = "Multiple high-risk indicators detected. Avoid sharing UPI, card, or advance payment details."
-    elif score >= 35:
-        verdict = "Needs Caution"
-        summary = "Some suspicious patterns found. Verify store reviews and return policies before ordering."
-    else:
-        verdict = "Website Looks Secure"
-        summary = "No major URL or discount-trap red flags detected in quick check."
-
-    return {
-        "score": score,
-        "verdict": verdict,
-        "summary": summary,
-        "flags": flags or ["No obvious high-risk URL or discount-trap signals found."],
-        "tips": [
-            "Check clear refund, return, and customer support contact details before paying.",
-            "Avoid rushing into steep social-media ad discounts without independent reviews."
-        ]
-    }
+    is_secure: bool = False
+    advice: str
+    checks: List[StoreCheckItem] = []
+    disclaimer: str = "Automated risk assessment—not a 100% legal or financial guarantee."
 
 
 @app.get("/")
@@ -117,30 +82,45 @@ def serve_dashboard():
 
 @app.get("/scanner")
 def serve_scanner():
-    scanner_path = os.path.join(STATIC_DIR, "scanner.html")
-    if os.path.exists(scanner_path):
-        return FileResponse(scanner_path)
+    dashboard_path = os.path.join(STATIC_DIR, "dashboard.html")
+    if os.path.exists(dashboard_path):
+        return FileResponse(dashboard_path)
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "online", "service": "FraudLens AI"}
+    return {
+        "status": "online",
+        "service": "FraudLens AI",
+        "analyzer_loaded": analyze_store is not None,
+    }
 
 
-@app.post("/api/analyze-url", response_model=UrlScanResponse)
-def analyze_url(req: UrlScanRequest):
-    normalized_url, domain = _normalize_url(req.url)
-    result = _analyze_signals(normalized_url, domain, req.ad_text or "", req.claimed_discount or "")
-    return UrlScanResponse(
-        url=normalized_url,
-        domain=domain,
-        risk_score=result["score"],
-        verdict=result["verdict"],
-        summary=result["summary"],
-        red_flags=result["flags"],
-        safety_tips=result["tips"]
-    )
+@app.post("/api/analyze-url", response_model=StoreScanResponse)
+def api_analyze_url(req: StoreScanRequest) -> Dict[str, Any]:
+    target_url = (req.raw_url or req.url or "").strip()
+    if not target_url:
+        raise HTTPException(status_code=400, detail="Please enter a website URL.")
+
+    if analyze_store is None:
+        raise HTTPException(
+            status_code=500,
+            detail="analyzer.py could not be imported. Ensure analyzer.py is in the project root.",
+        )
+
+    try:
+        return analyze_store(
+            raw_url=target_url,
+            insta_handle=req.insta_handle,
+            mrp_price=req.mrp_price,
+            offer_price=req.offer_price,
+            watchlist_hits=req.watchlist_hits,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Store analysis failed: {str(exc)}") from exc
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
