@@ -310,6 +310,7 @@
             getAuth,
             signInWithRedirect,
             getRedirectResult,
+            onAuthStateChanged,
             GoogleAuthProvider
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import {
@@ -339,63 +340,73 @@
         let generatedOtp = null;
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
+        let isHandlingGoogleAuth = false;
 
         async function completeGoogleSignIn(user) {
-            const username = user.email ? user.email.split('@')[0].toLowerCase() : "google_user";
-            const fullName = user.displayName || "FraudLens User";
-            const email = (user.email || "").trim().toLowerCase();
+            if (!user || isHandlingGoogleAuth) return;
+            isHandlingGoogleAuth = true;
 
-            const userDocRef = doc(db, "users", username);
-            const existingSnap = await getDoc(userDocRef);
-            const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
+            const btn = document.getElementById('googleBtn');
+            const btnText = document.getElementById('googleBtnText');
+            const spinner = document.getElementById('googleSpinner');
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.innerText = "Redirecting to dashboard...";
+            if (spinner) spinner.classList.remove('hidden');
 
-            const userData = {
-                username,
-                fullName,
-                email,
-                photo: user.photoURL || "",
-                authProvider: "google",
-                welcomeEmailSent: true,
-                lastLogin: new Date().toISOString()
-            };
+            try {
+                const username = user.email ? user.email.split('@')[0].toLowerCase() : "google_user";
+                const fullName = user.displayName || "FraudLens User";
+                const email = (user.email || "").trim().toLowerCase();
 
-            if (!existingSnap.exists()) {
-                userData.createdAt = new Date().toISOString();
+                const userDocRef = doc(db, "users", username);
+                const existingSnap = await getDoc(userDocRef);
+                const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
+
+                const userData = {
+                    username,
+                    fullName,
+                    email,
+                    photo: user.photoURL || "",
+                    authProvider: "google",
+                    welcomeEmailSent: true,
+                    lastLogin: new Date().toISOString()
+                };
+
+                if (!existingSnap.exists()) {
+                    userData.createdAt = new Date().toISOString();
+                }
+
+                await setDoc(userDocRef, userData, { merge: true });
+                localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
+
+                if (isFirstTimeGoogleUser && email) {
+                    await window.sendWelcomeEmail(fullName, email);
+                    showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting to dashboard...`, "success");
+                } else {
+                    showAlert(`Welcome back, ${fullName}! Redirecting to dashboard...`, "success");
+                }
+
+                window.location.replace('/dashboard');
+            } catch (error) {
+                console.error("Google Sign-In Post-Auth Error:", error);
+                isHandlingGoogleAuth = false;
+                if (btn) btn.disabled = false;
+                if (btnText) btnText.innerText = "Continue with Google";
+                if (spinner) spinner.classList.add('hidden');
+                showAlert("Google Sign-In failed: " + error.message, "error");
             }
-
-            await setDoc(userDocRef, userData, { merge: true });
-            localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
-
-            if (isFirstTimeGoogleUser && email) {
-                await window.sendWelcomeEmail(fullName, email);
-                showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting to dashboard...`, "success");
-            } else {
-                showAlert(`Welcome back, ${fullName}! Redirecting to dashboard...`, "success");
-            }
-
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1200);
         }
 
-        // Handle return from Google Redirect (resilient to tab switching)
-        getRedirectResult(auth)
-            .then(async (result) => {
-                if (result && result.user) {
-                    const btn = document.getElementById('googleBtn');
-                    btn.disabled = true;
-                    document.getElementById('googleBtnText').innerText = "Completing Google Sign-In...";
-                    document.getElementById('googleSpinner').classList.remove('hidden');
-                    await completeGoogleSignIn(result.user);
-                }
-            })
-            .catch((error) => {
-                console.error("Google Redirect Error:", error);
-                document.getElementById('googleBtn').disabled = false;
-                document.getElementById('googleBtnText').innerText = "Continue with Google";
-                document.getElementById('googleSpinner').classList.add('hidden');
-                showAlert("Google Sign-In failed: " + error.message, "error");
-            });
+        getRedirectResult(auth).catch((error) => {
+            console.error("Google Redirect Error:", error);
+            showAlert("Google Sign-In failed: " + error.message, "error");
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                completeGoogleSignIn(user);
+            }
+        });
 
         // Google Redirect Login Trigger
         window.handleGoogleLogin = async function() {
@@ -715,8 +726,8 @@
 
                     showAlert("Account created & welcome email sent! Redirecting to dashboard...", "success");
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1400);
+                        window.location.replace('/dashboard');
+                    }, 1200);
 
                 } else {
                     if (!userSnapshot.exists()) {
@@ -742,8 +753,8 @@
 
                     showAlert(`Welcome back, ${userData.fullName}! Redirecting to dashboard...`, "success");
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1400);
+                        window.location.replace('/dashboard');
+                    }, 1200);
                 }
             } catch (error) {
                 console.error("Database Error:", error);
