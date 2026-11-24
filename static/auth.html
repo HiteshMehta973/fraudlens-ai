@@ -325,7 +325,6 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        // Helper: Check whether this email address has already been used for an account or welcome email
         async function hasEmailBeenUsedBefore(normalizedEmail) {
             if (!normalizedEmail) return true;
 
@@ -347,7 +346,6 @@
             return foundInUsers;
         }
 
-        // Helper: Mark email as used so welcome email is never sent again for this email address
         async function markEmailAsUsed(normalizedEmail, providerName) {
             if (!normalizedEmail) return;
             const safeDocId = encodeURIComponent(normalizedEmail);
@@ -419,7 +417,7 @@
             }
         };
 
-        // Step 1: Send 6-Digit OTP via EmailJS
+        // Step 1: Send 6-Digit OTP via EmailJS (service_ge4ta08 / template_g8uuwjl)
         window.sendResetOTP = async function() {
             const targetEmail = document.getElementById('resetEmailInput').value.trim().toLowerCase();
             const typedUsername = document.getElementById('username').value.trim().toLowerCase();
@@ -661,7 +659,7 @@
             document.getElementById('authAlert').classList.add('hidden');
         }
 
-        // Send Welcome Email using EmailJS service
+        // Send Welcome Email using service_ge4ta08 and template_6o2pavp
         async function sendWelcomeEmail(fullName, userEmail) {
             const templateParams = {
                 to_name: fullName,
