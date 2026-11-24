@@ -221,7 +221,7 @@
                 <div class="relative flex justify-center text-xs uppercase"><span class="bg-panel px-4 text-gray-400 font-semibold tracking-wider">Or continue with</span></div>
             </div>
 
-            <!-- Real Google OAuth Button -->
+            <!-- Real Google OAuth Redirect Button -->
             <button type="button" id="googleBtn" onclick="handleGoogleLogin()" class="w-full py-2.5 px-4 rounded-xl bg-obsidian/90 border border-white/15 hover:border-blue-400/60 text-gray-100 font-semibold text-sm flex items-center justify-center gap-3 hover:bg-panelAlt transition-all group cursor-pointer shadow-lg">
                 <svg class="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                     <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.3 9 5 12 5z"/>
@@ -308,7 +308,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import {
             getAuth,
-            signInWithPopup,
+            signInWithRedirect,
+            getRedirectResult,
             GoogleAuthProvider
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import {
@@ -339,57 +340,78 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        // Google Login / First-Time Welcome Email + Cloud Sync
+        async function completeGoogleSignIn(user) {
+            const username = user.email ? user.email.split('@')[0].toLowerCase() : "google_user";
+            const fullName = user.displayName || "FraudLens User";
+            const email = (user.email || "").trim().toLowerCase();
+
+            const userDocRef = doc(db, "users", username);
+            const existingSnap = await getDoc(userDocRef);
+            const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
+
+            const userData = {
+                username,
+                fullName,
+                email,
+                photo: user.photoURL || "",
+                authProvider: "google",
+                welcomeEmailSent: true,
+                lastLogin: new Date().toISOString()
+            };
+
+            if (!existingSnap.exists()) {
+                userData.createdAt = new Date().toISOString();
+            }
+
+            await setDoc(userDocRef, userData, { merge: true });
+            localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
+
+            if (isFirstTimeGoogleUser && email) {
+                await window.sendWelcomeEmail(fullName, email);
+                showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting to dashboard...`, "success");
+            } else {
+                showAlert(`Welcome back, ${fullName}! Redirecting to dashboard...`, "success");
+            }
+
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1200);
+        }
+
+        // Handle return from Google Redirect (resilient to tab switching)
+        getRedirectResult(auth)
+            .then(async (result) => {
+                if (result && result.user) {
+                    const btn = document.getElementById('googleBtn');
+                    btn.disabled = true;
+                    document.getElementById('googleBtnText').innerText = "Completing Google Sign-In...";
+                    document.getElementById('googleSpinner').classList.remove('hidden');
+                    await completeGoogleSignIn(result.user);
+                }
+            })
+            .catch((error) => {
+                console.error("Google Redirect Error:", error);
+                document.getElementById('googleBtn').disabled = false;
+                document.getElementById('googleBtnText').innerText = "Continue with Google";
+                document.getElementById('googleSpinner').classList.add('hidden');
+                showAlert("Google Sign-In failed: " + error.message, "error");
+            });
+
+        // Google Redirect Login Trigger
         window.handleGoogleLogin = async function() {
+            const btn = document.getElementById('googleBtn');
             const btnText = document.getElementById('googleBtnText');
             const spinner = document.getElementById('googleSpinner');
 
-            btnText.innerText = "Connecting to Google...";
+            btn.disabled = true;
+            btnText.innerText = "Redirecting to Google...";
             spinner.classList.remove('hidden');
 
             try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-
-                const username = user.email ? user.email.split('@')[0].toLowerCase() : "google_user";
-                const fullName = user.displayName || "FraudLens User";
-                const email = (user.email || "").trim().toLowerCase();
-
-                const userDocRef = doc(db, "users", username);
-                const existingSnap = await getDoc(userDocRef);
-
-                // Check if this is the user's first Google sign-in
-                const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
-
-                const userData = {
-                    username,
-                    fullName,
-                    email,
-                    photo: user.photoURL || "",
-                    authProvider: "google",
-                    welcomeEmailSent: true,
-                    lastLogin: new Date().toISOString()
-                };
-
-                if (!existingSnap.exists()) {
-                    userData.createdAt = new Date().toISOString();
-                }
-
-                await setDoc(userDocRef, userData, { merge: true });
-                localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
-
-                if (isFirstTimeGoogleUser && email) {
-                    await window.sendWelcomeEmail(fullName, email);
-                    showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting to dashboard...`, "success");
-                } else {
-                    showAlert(`Welcome back, ${fullName}! Redirecting to dashboard...`, "success");
-                }
-
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1400);
+                await signInWithRedirect(auth, provider);
             } catch (error) {
-                console.error("Firebase Auth Error:", error);
+                console.error("Firebase Redirect Trigger Error:", error);
+                btn.disabled = false;
                 btnText.innerText = "Continue with Google";
                 spinner.classList.add('hidden');
                 showAlert("Google Sign-In failed: " + error.message, "error");
