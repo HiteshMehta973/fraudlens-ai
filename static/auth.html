@@ -283,6 +283,26 @@
         drawCyberStream();
     </script>
 
+    <!-- Shared Welcome Email Helper -->
+    <script>
+        window.sendWelcomeEmail = async function(fullName, userEmail) {
+            if (!userEmail) return;
+            const templateParams = {
+                to_name: fullName || "FraudLens User",
+                to_email: userEmail,
+                email: userEmail,
+                message: `Hi ${fullName || "there"},\n\nWelcome to FraudLens AI!\nYour account is ready for checking suspicious links, fake shopping stores, and high-risk discounts before you pay.\n\nStay safe online,\nTeam FraudLens AI`
+            };
+
+            try {
+                const response = await emailjs.send('service_ge4ta08', 'template_6o2pavp', templateParams);
+                console.log('Welcome email sent!', response.status, response.text);
+            } catch (error) {
+                console.error('Failed to send welcome email:', error);
+            }
+        };
+    </script>
+
     <!-- Firebase Auth & Cloud Firestore Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -319,7 +339,7 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        // Google Login / Cloud Sync
+        // Google Login / First-Time Welcome Email + Cloud Sync
         window.handleGoogleLogin = async function() {
             const btnText = document.getElementById('googleBtnText');
             const spinner = document.getElementById('googleSpinner');
@@ -331,18 +351,40 @@
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
 
+                const username = user.email ? user.email.split('@')[0].toLowerCase() : "google_user";
+                const fullName = user.displayName || "FraudLens User";
+                const email = (user.email || "").trim().toLowerCase();
+
+                const userDocRef = doc(db, "users", username);
+                const existingSnap = await getDoc(userDocRef);
+
+                // Check if this is the user's first Google sign-in
+                const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
+
                 const userData = {
-                    username: user.email ? user.email.split('@')[0] : "google_user",
-                    fullName: user.displayName || "FraudLens User",
-                    email: user.email,
+                    username,
+                    fullName,
+                    email,
                     photo: user.photoURL || "",
+                    authProvider: "google",
+                    welcomeEmailSent: true,
                     lastLogin: new Date().toISOString()
                 };
 
-                await setDoc(doc(db, "users", userData.username), userData, { merge: true });
+                if (!existingSnap.exists()) {
+                    userData.createdAt = new Date().toISOString();
+                }
+
+                await setDoc(userDocRef, userData, { merge: true });
                 localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
 
-                showAlert(`Welcome, ${userData.fullName}! Redirecting to dashboard...`, "success");
+                if (isFirstTimeGoogleUser && email) {
+                    await window.sendWelcomeEmail(fullName, email);
+                    showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting to dashboard...`, "success");
+                } else {
+                    showAlert(`Welcome back, ${fullName}! Redirecting to dashboard...`, "success");
+                }
+
                 setTimeout(() => {
                     window.location.href = '/dashboard';
                 }, 1400);
@@ -593,23 +635,6 @@
             document.getElementById('authAlert').classList.add('hidden');
         }
 
-        // Send Welcome Email using EmailJS
-        function sendWelcomeEmail(fullName, userEmail) {
-            const templateParams = {
-                to_name: fullName,
-                to_email: userEmail,
-                email: userEmail,
-                message: `Hi ${fullName},\n\nWelcome to FraudLens AI!\nYour account is ready for checking suspicious links, fake shopping stores, and high-risk discounts before you pay.\n\nStay safe online,\nTeam FraudLens AI`
-            };
-
-            emailjs.send('service_ge4ta08', 'template_6o2pavp', templateParams)
-                .then(function(response) {
-                    console.log('Welcome email sent!', response.status, response.text);
-                }, function(error) {
-                    console.error('Failed to send welcome email.', error);
-                });
-        }
-
         // Manual Sign Up & Sign In with Cloud Firestore
         async function handleAuthSubmit(event) {
             event.preventDefault();
@@ -657,13 +682,14 @@
                         fullName,
                         email,
                         password,
+                        welcomeEmailSent: true,
                         createdAt: new Date().toISOString()
                     };
 
                     await setDoc(userDocRef, newUser);
                     localStorage.setItem('fraudlens_current_user', JSON.stringify({ username, fullName, email }));
 
-                    sendWelcomeEmail(fullName, email);
+                    await window.sendWelcomeEmail(fullName, email);
 
                     showAlert("Account created & welcome email sent! Redirecting to dashboard...", "success");
                     setTimeout(() => {
