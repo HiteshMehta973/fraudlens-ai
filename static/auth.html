@@ -325,42 +325,84 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        async function hasEmailBeenUsedBefore(normalizedEmail) {
-            if (!normalizedEmail) return true;
+        function getLocalSentEmails() {
+            try {
+                return JSON.parse(localStorage.getItem('fraudlens_welcome_sent_emails') || '[]');
+            } catch (_) {
+                return [];
+            }
+        }
 
-            const safeDocId = encodeURIComponent(normalizedEmail);
-            const emailTrackerSnap = await getDoc(doc(db, "welcome_emails", safeDocId));
-            if (emailTrackerSnap.exists()) {
+        function addLocalSentEmail(normalizedEmail) {
+            const list = getLocalSentEmails();
+            if (!list.includes(normalizedEmail)) {
+                list.push(normalizedEmail);
+                localStorage.setItem('fraudlens_welcome_sent_emails', JSON.stringify(list));
+            }
+        }
+
+        async function hasWelcomeMailAlreadyBeenSent(normalizedEmail) {
+            if (!normalizedEmail) return false;
+
+            if (getLocalSentEmails().includes(normalizedEmail)) {
                 return true;
             }
 
-            const allUsersSnap = await getDocs(collection(db, "users"));
-            let foundInUsers = false;
-            allUsersSnap.forEach((docSnap) => {
-                const data = docSnap.data();
-                if (data.email && data.email.trim().toLowerCase() === normalizedEmail) {
-                    foundInUsers = true;
+            try {
+                const safeDocId = encodeURIComponent(normalizedEmail);
+                const trackerSnap = await getDoc(doc(db, "welcome_emails", safeDocId));
+                if (trackerSnap.exists() && trackerSnap.data().welcomeEmailSent === true) {
+                    addLocalSentEmail(normalizedEmail);
+                    return true;
                 }
-            });
+            } catch (err) {
+                console.warn("Firestore welcome_emails lookup warning:", err);
+            }
 
-            return foundInUsers;
+            try {
+                const allUsersSnap = await getDocs(collection(db, "users"));
+                let alreadySentInUsers = false;
+                allUsersSnap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (
+                        data.email &&
+                        data.email.trim().toLowerCase() === normalizedEmail &&
+                        data.welcomeEmailSent === true
+                    ) {
+                        alreadySentInUsers = true;
+                    }
+                });
+                if (alreadySentInUsers) {
+                    addLocalSentEmail(normalizedEmail);
+                    return true;
+                }
+            } catch (err) {
+                console.warn("Firestore users lookup warning:", err);
+            }
+
+            return false;
         }
 
-        async function markEmailAsUsed(normalizedEmail, providerName) {
+        async function recordWelcomeMailSent(normalizedEmail, sourceMethod) {
             if (!normalizedEmail) return;
-            const safeDocId = encodeURIComponent(normalizedEmail);
-            await setDoc(doc(db, "welcome_emails", safeDocId), {
-                email: normalizedEmail,
-                provider: providerName,
-                welcomeEmailSent: true,
-                firstUsedAt: new Date().toISOString()
-            }, { merge: true });
+            addLocalSentEmail(normalizedEmail);
+            try {
+                const safeDocId = encodeURIComponent(normalizedEmail);
+                await setDoc(doc(db, "welcome_emails", safeDocId), {
+                    email: normalizedEmail,
+                    welcomeEmailSent: true,
+                    firstWelcomeSource: sourceMethod,
+                    welcomeSentAt: new Date().toISOString()
+                }, { merge: true });
+            } catch (err) {
+                console.warn("Firestore welcome_emails write warning:", err);
+            }
         }
 
-        window.hasEmailBeenUsedBefore = hasEmailBeenUsedBefore;
-        window.markEmailAsUsed = markEmailAsUsed;
+        window.hasWelcomeMailAlreadyBeenSent = hasWelcomeMailAlreadyBeenSent;
+        window.recordWelcomeMailSent = recordWelcomeMailSent;
 
-        // Google Login: Send welcome mail only if this email has never been used before
+        // Google Login: First-time email gets welcome mail; repeat Google sign-in or later Sign-Up with same email does NOT
         window.handleGoogleLogin = async function() {
             const btnText = document.getElementById('googleBtnText');
             const spinner = document.getElementById('googleSpinner');
@@ -376,8 +418,8 @@
                 const fullName = user.displayName || "FraudLens User";
                 const email = (user.email || "").trim().toLowerCase();
 
-                const emailAlreadyUsed = await hasEmailBeenUsedBefore(email);
-                const isFirstTimeEmail = !emailAlreadyUsed;
+                const alreadySent = await hasWelcomeMailAlreadyBeenSent(email);
+                const shouldSendWelcome = Boolean(email) && !alreadySent;
 
                 const userDocRef = doc(db, "users", username);
                 const existingSnap = await getDoc(userDocRef);
@@ -398,13 +440,12 @@
                 await setDoc(userDocRef, userData, { merge: true });
                 localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
 
-                if (isFirstTimeEmail && email) {
-                    await markEmailAsUsed(email, "google");
+                if (shouldSendWelcome) {
+                    await recordWelcomeMailSent(email, "google");
                     await sendWelcomeEmail(fullName, email);
-                    showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting...`, "success");
-                } else {
-                    showAlert(`Welcome back, ${fullName}! Redirecting...`, "success");
                 }
+
+                showAlert(`Welcome, ${fullName}! Redirecting to scanner...`, "success");
 
                 setTimeout(() => {
                     window.location.href = "/dashboard";
@@ -417,7 +458,7 @@
             }
         };
 
-        // Step 1: Send 6-Digit OTP via EmailJS (service_ge4ta08 / template_g8uuwjl)
+        // Step 1: Send 6-Digit OTP via EmailJS
         window.sendResetOTP = async function() {
             const targetEmail = document.getElementById('resetEmailInput').value.trim().toLowerCase();
             const typedUsername = document.getElementById('username').value.trim().toLowerCase();
@@ -664,8 +705,7 @@
             const templateParams = {
                 to_name: fullName,
                 to_email: userEmail,
-                email: userEmail,
-                message: `Hi ${fullName},\n\nWelcome to FraudLens AI!\nWe're excited to have you on board.\n\nShopping online and checking links from ads or messages can be risky, and FraudLens AI helps you spot fake shopping stores, suspicious domains, and high-risk discount traps before you pay.\n\nHere's what you can do with FraudLens AI:\n- Scan store URLs and promotional links for risk signals.\n- Detect aggressive discounts, urgency traps, and suspicious domains.\n- View clear risk scores, red flags, and safety tips in your dashboard.\n- Track recent scans to shop with greater confidence.\n\nWhether you're verifying a new online store or checking a link shared on social media, FraudLens AI is here to help you stay safe.\n\nBest regards,\nTeam FraudLens AI`
+                email: userEmail
             };
 
             try {
@@ -718,8 +758,8 @@
                         return;
                     }
 
-                    const emailAlreadyUsed = await window.hasEmailBeenUsedBefore(email);
-                    const isFirstTimeEmail = !emailAlreadyUsed;
+                    const alreadySent = await window.hasWelcomeMailAlreadyBeenSent(email);
+                    const shouldSendWelcome = Boolean(email) && !alreadySent;
 
                     const newUser = {
                         username,
@@ -733,14 +773,12 @@
                     await setDoc(userDocRef, newUser);
                     localStorage.setItem('fraudlens_current_user', JSON.stringify({ username, fullName, email }));
 
-                    if (isFirstTimeEmail && email) {
-                        await window.markEmailAsUsed(email, "signup");
+                    if (shouldSendWelcome) {
+                        await window.recordWelcomeMailSent(email, "signup");
                         await sendWelcomeEmail(fullName, email);
-                        showAlert("Account created & welcome email sent successfully!", "success");
-                    } else {
-                        showAlert("Account created! (Welcome email already sent previously for this email.)", "success");
                     }
 
+                    showAlert("Account created successfully! Redirecting to scanner...", "success");
                     setTimeout(() => {
                         window.location.href = "/dashboard";
                     }, 1500);
@@ -767,7 +805,7 @@
                         email: userData.email
                     }));
 
-                    showAlert(`Welcome back, ${userData.fullName}!`, "success");
+                    showAlert(`Welcome back, ${userData.fullName}! Redirecting to scanner...`, "success");
                     setTimeout(() => {
                         window.location.href = "/dashboard";
                     }, 1500);
