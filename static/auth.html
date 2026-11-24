@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FraudLens AI - Authentication Portal</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc2626'/><text y='.9em' x='50%' text-anchor='middle' font-size='64'>🛡️</text></svg>">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -36,13 +37,13 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass-card {
-            background: rgba(8, 17, 35, 0.75);
+            background: rgba(8, 17, 35, 0.78);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(0, 242, 254, 0.2);
+            border: 1px solid rgba(0, 242, 254, 0.22);
         }
         .glow-effect {
-            box-shadow: 0 0 60px -15px rgba(0, 242, 254, 0.3);
+            box-shadow: 0 0 60px -15px rgba(0, 242, 254, 0.28), 0 0 40px -20px rgba(239, 68, 68, 0.22);
         }
         #bgCanvas {
             position: fixed;
@@ -61,7 +62,7 @@
     <canvas id="bgCanvas"></canvas>
 
     <!-- Ambient Glowing Background Blobs -->
-    <div class="absolute -top-40 -left-40 w-96 h-96 bg-neonCyan/15 rounded-full blur-[140px] pointer-events-none z-0"></div>
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-rose-500/15 rounded-full blur-[140px] pointer-events-none z-0"></div>
     <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-neonBlue/15 rounded-full blur-[140px] pointer-events-none z-0"></div>
 
     <!-- Main Auth Container -->
@@ -70,10 +71,10 @@
         <!-- Logo / Brand Header -->
         <div class="text-center mb-6">
             <a href="/" class="inline-flex items-center gap-3 group">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center glow-effect group-hover:scale-110 transition-transform duration-300">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-red-600 via-blue-600 to-cyan-500 flex items-center justify-center glow-effect group-hover:scale-110 transition-transform duration-300">
                     <i class="fa-solid fa-shield-halved text-white text-xl"></i>
                 </div>
-                <span class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">FraudLens AI</span>
+                <span class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-red-400 via-cyan-300 to-blue-400 bg-clip-text text-transparent">FraudLens AI</span>
             </a>
             <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mt-2">Fake Store &amp; Phishing Link Shield</p>
         </div>
@@ -83,7 +84,7 @@
 
             <!-- Tab Switcher -->
             <div class="flex rounded-xl bg-slate-950/80 p-1.5 mb-6 border border-slate-800/80">
-                <button type="button" id="tabSignin" onclick="switchTab('signin')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20">Sign In</button>
+                <button type="button" id="tabSignin" onclick="switchTab('signin')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-red-600 to-blue-600 text-white shadow-lg shadow-blue-600/20">Sign In</button>
                 <button type="button" id="tabSignup" onclick="switchTab('signup')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 text-slate-400 hover:text-white">Sign Up</button>
             </div>
 
@@ -103,7 +104,7 @@
                         <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                             <i class="fa-solid fa-user"></i>
                         </span>
-                        <input type="text" id="fullName" placeholder="John Doe" class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl px-4 py-2.5 pl-11 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                        <input type="text" id="fullName" placeholder="Your Full Name" class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl px-4 py-2.5 pl-11 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all">
                     </div>
                 </div>
 
@@ -114,7 +115,7 @@
                         <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
                             <i class="fa-solid fa-envelope"></i>
                         </span>
-                        <input type="email" id="email" placeholder="john@example.com" class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl px-4 py-2.5 pl-11 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                        <input type="email" id="email" placeholder="you@example.com" class="w-full bg-slate-950/60 border border-slate-700/60 rounded-xl px-4 py-2.5 pl-11 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all">
                     </div>
                 </div>
 
@@ -191,29 +192,32 @@
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit" id="submitBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 text-white font-bold text-sm shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer mt-3">
+                <button type="submit" id="submitBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 via-blue-600 to-cyan-600 text-white font-bold text-sm shadow-xl shadow-blue-600/25 hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer mt-3">
                     <span id="submitBtnText">Sign In to Dashboard</span>
                     <i id="submitSpinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
                 </button>
             </form>
 
-            <!-- Divider -->
-            <div class="relative my-5">
-                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-800/80"></div></div>
-                <div class="relative flex justify-center text-xs uppercase"><span class="bg-card px-4 text-slate-500 font-semibold tracking-wider">Or continue with</span></div>
-            </div>
+            <!-- Google OAuth Section (Sign In Only; Hidden on Sign Up) -->
+            <div id="googleAuthSection">
+                <!-- Divider -->
+                <div class="relative my-5">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-800/80"></div></div>
+                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-card px-4 text-slate-500 font-semibold tracking-wider">Or continue with</span></div>
+                </div>
 
-            <!-- Real Google OAuth Button -->
-            <button type="button" id="googleBtn" onclick="handleGoogleLogin()" class="w-full py-2.5 px-4 rounded-xl bg-slate-950/90 border border-slate-700/60 hover:border-cyan-500/60 text-slate-200 font-semibold text-sm flex items-center justify-center gap-3 hover:bg-slate-900 transition-all group cursor-pointer shadow-lg">
-                <svg class="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                    <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.3 9 5 12 5z"/>
-                    <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
-                    <path fill="#FBBC05" d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.9 6.4C.7 8.8 0 10.3 0 12s.7 3.2 1.9 5.6l3.7-2.9z"/>
-                    <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.3L1.9 15c1.8 3.8 5.6 8 10.1 8z"/>
-                </svg>
-                <span id="googleBtnText">Continue with Google</span>
-                <i id="googleSpinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
-            </button>
+                <!-- Real Google OAuth Button -->
+                <button type="button" id="googleBtn" onclick="handleGoogleLogin()" class="w-full py-2.5 px-4 rounded-xl bg-slate-950/90 border border-slate-700/60 hover:border-cyan-500/60 text-slate-200 font-semibold text-sm flex items-center justify-center gap-3 hover:bg-slate-900 transition-all group cursor-pointer shadow-lg">
+                    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                        <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.3 9 5 12 5z"/>
+                        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                        <path fill="#FBBC05" d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7s.2-2 .4-2.7L1.9 6.4C.7 8.8 0 10.3 0 12s.7 3.2 1.9 5.6l3.7-2.9z"/>
+                        <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.3L1.9 15c1.8 3.8 5.6 8 10.1 8z"/>
+                    </svg>
+                    <span id="googleBtnText">Continue with Google</span>
+                    <i id="googleSpinner" class="fa-solid fa-circle-notch fa-spin hidden"></i>
+                </button>
+            </div>
 
         </div>
 
@@ -322,7 +326,7 @@
         let resetTargetDocId = null;
         let otpExpiryTime = 0;
 
-        // Google Login / Cloud Sync + First-Time Welcome Mail
+        // Google Login: Welcome email only on first-time Google sign-in; no welcome email on repeat Google sign-in
         window.handleGoogleLogin = async function() {
             const btnText = document.getElementById('googleBtnText');
             const spinner = document.getElementById('googleSpinner');
@@ -340,28 +344,31 @@
 
                 const userDocRef = doc(db, "users", username);
                 const existingSnap = await getDoc(userDocRef);
-                const isNewUser = !existingSnap.exists();
+                const isFirstTimeGoogleUser = !existingSnap.exists() || !existingSnap.data().welcomeEmailSent;
 
                 const userData = {
                     username,
                     fullName,
                     email,
                     photo: user.photoURL || "",
+                    welcomeEmailSent: true,
                     lastLogin: new Date().toISOString()
                 };
 
-                if (isNewUser) {
+                if (!existingSnap.exists()) {
                     userData.createdAt = new Date().toISOString();
                 }
 
                 await setDoc(userDocRef, userData, { merge: true });
                 localStorage.setItem('fraudlens_current_user', JSON.stringify(userData));
 
-                if (isNewUser && email) {
+                if (isFirstTimeGoogleUser && email) {
                     await sendWelcomeEmail(fullName, email);
+                    showAlert(`Welcome, ${fullName}! Welcome email sent. Redirecting...`, "success");
+                } else {
+                    showAlert(`Welcome back, ${fullName}! Redirecting...`, "success");
                 }
 
-                showAlert(`Welcome, ${fullName}! Redirecting...`, "success");
                 setTimeout(() => {
                     window.location.href = "/dashboard";
                 }, 1500);
@@ -536,11 +543,12 @@
             const emailFieldContainer = document.getElementById('emailFieldContainer');
             const captchaWidgetContainer = document.getElementById('captchaWidgetContainer');
             const signinOptions = document.getElementById('signinOptions');
+            const googleAuthSection = document.getElementById('googleAuthSection');
             const submitBtnText = document.getElementById('submitBtnText');
             hideAlert();
 
             if (mode === 'signin') {
-                tabSignin.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20";
+                tabSignin.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-red-600 to-blue-600 text-white shadow-lg shadow-blue-600/20";
                 tabSignup.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 text-slate-400 hover:text-white";
                 nameFieldContainer.classList.add('hidden');
                 emailFieldContainer.classList.add('hidden');
@@ -548,9 +556,10 @@
                 document.getElementById('fullName').required = false;
                 document.getElementById('email').required = false;
                 signinOptions.classList.remove('hidden');
+                googleAuthSection.classList.remove('hidden');
                 submitBtnText.innerText = "Sign In to Dashboard";
             } else {
-                tabSignup.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20";
+                tabSignup.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 bg-gradient-to-r from-red-600 to-blue-600 text-white shadow-lg shadow-blue-600/20";
                 tabSignin.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 text-slate-400 hover:text-white";
                 nameFieldContainer.classList.remove('hidden');
                 emailFieldContainer.classList.remove('hidden');
@@ -558,6 +567,7 @@
                 document.getElementById('fullName').required = true;
                 document.getElementById('email').required = true;
                 signinOptions.classList.add('hidden');
+                googleAuthSection.classList.add('hidden');
                 toggleForgotBox(false);
                 submitBtnText.innerText = "Create Account";
 
@@ -676,6 +686,7 @@
                         fullName,
                         email,
                         password,
+                        welcomeEmailSent: true,
                         createdAt: new Date().toISOString()
                     };
 
