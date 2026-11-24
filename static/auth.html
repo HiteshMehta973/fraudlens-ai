@@ -432,12 +432,10 @@
                 generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
                 otpExpiryTime = Date.now() + 10 * 60 * 1000;
 
-                await emailjs.send('service_ge4ta08', 'template_g8uuwjl', {
+              await emailjs.send('service_ge4ta08', 'template_66d7m5l', {
                     to_name: userName,
                     to_email: targetEmail,
-                    email: targetEmail,
-                    otp: generatedOtp,
-                    otp_code: generatedOtp
+                    otp: generatedOtp
                 });
 
                 document.getElementById('otpStep1').classList.add('hidden');
@@ -622,22 +620,19 @@
         }
 
         // Send Welcome Email using EmailJS service
-        async function sendWelcomeEmail(fullName, userEmail) {
+       async function sendWelcomeEmail(fullName, userEmail) {
             const templateParams = {
                 to_name: fullName,
-                to_email: userEmail,
-                email: userEmail,
-                message: `Hi ${fullName},\n\nWelcome to FraudLens AI!\nWe're excited to have you on board.\n\nShopping online and checking links from ads or messages can be risky, and FraudLens AI helps you spot fake shopping stores, suspicious domains, and high-risk discount traps before you pay.\n\nHere's what you can do with FraudLens AI:\n- Scan store URLs and promotional links for risk signals.\n- Detect aggressive discounts, urgency traps, and suspicious domains.\n- View clear risk scores, red flags, and safety tips in your dashboard.\n- Track recent scans to shop with greater confidence.\n\nWhether you're verifying a new online store or checking a link shared on social media, FraudLens AI is here to help you stay safe.\n\nBest regards,\nTeam FraudLens AI`
+                to_email: userEmail
             };
 
             try {
-                const response = await emailjs.send('service_ge4ta08', 'template_6o2pavp', templateParams);
+                const response = await emailjs.send('service_ge4ta08', 'template_wmmqkf6', templateParams);
                 console.log('Welcome email successfully sent!', response.status, response.text);
             } catch (error) {
                 console.error('Failed to send welcome email.', error);
             }
         }
-
         // Manual Sign Up & Sign In with Cloud Firestore
         async function handleAuthSubmit(event) {
             event.preventDefault();
