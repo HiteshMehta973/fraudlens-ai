@@ -1,4 +1,19 @@
-﻿venv/
+# Python & virtual environments
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Local SQLite database & large dataset CSVs
+data/*.db
+ml/*.csv
+ml/*.zip
+
+# OS / IDE clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
