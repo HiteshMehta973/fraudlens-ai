@@ -1,20 +1,32 @@
 {
   "model_type": "RandomForestClassifier",
-  "train_samples": 960,
-  "test_samples": 240,
-  "accuracy": 100.0,
-  "precision": 100.0,
-  "recall": 100.0,
-  "f1_score": 100.0,
+  "dataset_sources": [
+    "malicious_phish.csv",
+    "phiusiil.csv",
+    "domains_phishing.csv"
+  ],
+  "total_samples": 73329,
+  "train_samples": 58663,
+  "test_samples": 14666,
+  "decision_threshold": 0.53,
+  "accuracy": 87.85,
+  "precision": 83.29,
+  "recall": 87.76,
+  "f1_score": 85.47,
   "feature_importances": {
-    "domain_age_days": 43.67,
-    "url_length": 13.16,
-    "missing_contact": 12.35,
-    "missing_policies": 10.66,
-    "is_suspicious_tld": 8.71,
-    "has_bait_keyword": 6.89,
-    "hyphen_count": 3.88,
-    "has_https": 0.68
+    "has_https": 22.67,
+    "url_length": 19.03,
+    "dot_count": 16.3,
+    "path_depth": 14.54,
+    "digit_count": 14.17,
+    "special_char_count": 5.93,
+    "hyphen_count": 3.69,
+    "is_suspicious_tld": 1.67,
+    "has_bait_keyword": 1.21,
+    "has_ip": 0.79,
+    "domain_age_days": 0.0,
+    "missing_policies": 0.0,
+    "missing_contact": 0.0
   },
   "disclaimer": "Risk estimate only based on trained feature patterns \u2014 not a guaranteed fraud verdict."
 }

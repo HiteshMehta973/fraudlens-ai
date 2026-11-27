@@ -145,7 +145,6 @@ def api_analyze_url(req: StoreScanRequest) -> Dict[str, Any]:
             detail="analyzer.py could not be imported. Ensure analyzer.py is in the project root.",
         )
 
-    init_db()
     domain_guess = normalize_domain(target_url)
     db_hits = count_watchlist_hits(domain_guess, req.insta_handle)
     effective_hits = max(db_hits, int(req.watchlist_hits or 0))
@@ -169,19 +168,16 @@ def api_analyze_url(req: StoreScanRequest) -> Dict[str, Any]:
 
 @app.get("/api/scans")
 def api_get_scans(limit: int = 15):
-    init_db()
     return {"scans": get_recent_scans(limit=limit)}
 
 
 @app.get("/api/watchlist")
 def api_get_watchlist(limit: int = 20):
-    init_db()
     return {"watchlist": get_watchlist(limit=limit)}
 
 
 @app.post("/api/report-scam")
 def api_report_scam(req: ScamReportRequest):
-    init_db()
     try:
         saved = add_scam_report(
             domain_input=req.domain,
@@ -193,7 +189,8 @@ def api_report_scam(req: ScamReportRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 if __name__ == "__main__":

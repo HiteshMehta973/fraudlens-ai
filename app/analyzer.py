@@ -1,4 +1,5 @@
 import ipaddress
+import json
 import os
 import socket
 from datetime import datetime, timezone
@@ -13,13 +14,32 @@ from bs4 import BeautifulSoup
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_PATH = os.path.join(BASE_DIR, "ml", "fraud_model.pkl")
+METRICS_PATH = os.path.join(BASE_DIR, "ml", "model_metrics.json")
+
+FEATURE_COLUMNS = [
+    "is_suspicious_tld",
+    "url_length",
+    "hyphen_count",
+    "has_bait_keyword",
+    "digit_count",
+    "dot_count",
+    "special_char_count",
+    "path_depth",
+    "has_ip",
+    "domain_age_days",
+    "has_https",
+    "missing_policies",
+    "missing_contact",
+]
 
 SUSPICIOUS_TLDS = {
     "xyz", "top", "club", "online", "site", "shop", "buzz", "icu", "tk", "store", "live"
 }
 BAIT_KEYWORDS = [
-    "free", "lucky", "winner", "urgent", "cheap", "80off", "90off", "clearance", "giveaway", "sale"
+    "free", "lucky", "winner", "urgent", "cheap", "80off", "90off", "clearance", "giveaway", "sale",
+    "login", "verify", "secure", "update", "account", "bank"
 ]
+SPECIAL_CHARS = set("?=&@%_$!~*")
 POLICY_TERMS = [
     "refund policy", "return policy", "cancellation", "returns", "exchange policy"
 ]
@@ -34,7 +54,72 @@ def load_ml_model():
     return None
 
 
+def load_decision_threshold(default: float = 0.50) -> float:
+    if os.path.exists(METRICS_PATH):
+        try:
+            with open(METRICS_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            val = float(data.get("decision_threshold", default))
+            if 0.1 <= val <= 0.9:
+                return val
+        except Exception:
+            pass
+    return default
+
+
 ML_MODEL = load_ml_model()
+ML_THRESHOLD = load_decision_threshold()
+
+
+def _is_ip_host(host: str) -> int:
+    clean_host = (host or "").strip("[]").split(":")[0]
+    if not clean_host:
+        return 0
+    try:
+        ipaddress.ip_address(clean_host)
+        return 1
+    except ValueError:
+        return 0
+
+
+def extract_url_features(
+    raw_url: str,
+    domain_age_days: int = 365,
+    has_https: Optional[int] = None,
+    missing_policies: int = 0,
+    missing_contact: int = 0,
+) -> Dict[str, Any]:
+    original = str(raw_url or "").strip()
+    cleaned = original if original.startswith(("http://", "https://")) else "https://" + original
+
+    parsed = urlparse(cleaned)
+    ext = tldextract.extract(cleaned)
+    tld = (ext.suffix or "").lower()
+    domain_root = (ext.domain or "").lower()
+    host = (parsed.netloc or ext.fqdn or "").lower()
+    path_str = parsed.path or ""
+    path_query = f"{path_str}{parsed.query}".lower()
+    path_segments = [seg for seg in path_str.split("/") if seg]
+
+    https_val = (
+        1 if original.lower().startswith("https://") else 0
+    ) if has_https is None else int(has_https)
+
+    return {
+        "is_suspicious_tld": 1 if tld in SUSPICIOUS_TLDS else 0,
+        "url_length": len(cleaned),
+        "hyphen_count": domain_root.count("-") + path_query.count("-"),
+        "has_bait_keyword": 1 if any(k in cleaned.lower() for k in BAIT_KEYWORDS) else 0,
+        "digit_count": sum(ch.isdigit() for ch in cleaned),
+        "dot_count": cleaned.count("."),
+        "special_char_count": sum(ch in SPECIAL_CHARS for ch in cleaned),
+        "path_depth": len(path_segments),
+        "has_ip": _is_ip_host(host),
+        "domain_age_days": int(domain_age_days),
+        "has_https": https_val,
+        "missing_policies": int(missing_policies),
+        "missing_contact": int(missing_contact),
+    }
 
 
 def validate_and_guard_url(raw_url: str) -> Dict[str, str]:
@@ -310,19 +395,17 @@ def analyze_store(
             "points": pts,
         })
 
-    # 7. ML Prediction
+    # 7. ML Prediction (exact 13 features matching train_model.py)
     ml_scam_prob = 50.0
     if ML_MODEL is not None:
-        features = pd.DataFrame([{
-            "is_suspicious_tld": f_suspicious_tld,
-            "url_length": f_url_length,
-            "hyphen_count": f_hyphen_count,
-            "has_bait_keyword": f_has_bait,
-            "domain_age_days": f_domain_age,
-            "has_https": f_has_https,
-            "missing_policies": f_missing_policies,
-            "missing_contact": f_missing_contact,
-        }])
+        feat_dict = extract_url_features(
+            raw_url=url,
+            domain_age_days=f_domain_age,
+            has_https=f_has_https,
+            missing_policies=f_missing_policies,
+            missing_contact=f_missing_contact,
+        )
+        features = pd.DataFrame([feat_dict])[FEATURE_COLUMNS]
         ml_scam_prob = round(float(ML_MODEL.predict_proba(features)[0][1]) * 100, 1)
 
     rule_score = min(100, score_points)

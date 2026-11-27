@@ -142,7 +142,7 @@
         <!-- Scanner Input + Dynamic Verdict Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            <!-- Left: Scanner Form (Matches analyze_store inputs) -->
+            <!-- Left: Scanner Form -->
             <form id="scan-form" onsubmit="runUrlScan(event)" class="lg:col-span-6 glass-card p-6 sm:p-7 rounded-2xl space-y-4">
                 <div class="flex items-center justify-between border-b border-white/10 pb-3.5">
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
@@ -347,9 +347,18 @@
         drawCyberStream();
     </script>
 
-    <!-- Scanner Logic Connected to analyzer.py Endpoint -->
+    <!-- Scanner Logic Connected to /api/analyze-url -->
     <script>
         const HISTORY_KEY = 'fraudlens_recent_scans_v1';
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
         function hydrateUserBadge() {
             let storedUser = 'Analyst Session';
@@ -481,7 +490,7 @@
             }
 
             checksEl.innerHTML = checks.map(c => {
-                const status = (c.status || 'SAFE').toUpperCase();
+                const status = String(c.status || 'SAFE').toUpperCase();
                 let boxClass = 'bg-blue-950/25 border-sky-400/25';
                 let badgeClass = 'bg-sky-500/20 text-sky-300 border-sky-400/40';
                 let iconClass = 'fa-circle-check text-sky-400';
@@ -496,18 +505,18 @@
                     iconClass = 'fa-circle-exclamation text-amber-300';
                 }
 
-                const ptsText = c.points ? ` (+${c.points})` : '';
+                const ptsText = c.points ? ` (+${Number(c.points)})` : '';
                 return `
                     <li class="p-3.5 rounded-xl border ${boxClass} flex items-start justify-between gap-3">
                         <div class="flex items-start gap-2.5 min-w-0">
                             <i class="fa-solid ${iconClass} mt-0.5 shrink-0"></i>
                             <div class="min-w-0">
-                                <div class="font-semibold text-white">${c.title}</div>
-                                <div class="text-xs text-gray-300 mt-0.5">${c.detail || ''}</div>
+                                <div class="font-semibold text-white">${escapeHtml(c.title)}</div>
+                                <div class="text-xs text-gray-300 mt-0.5">${escapeHtml(c.detail || '')}</div>
                             </div>
                         </div>
                         <span class="px-2.5 py-0.5 rounded-full text-[11px] font-mono border shrink-0 ${badgeClass}">
-                            ${status}${ptsText}
+                            ${escapeHtml(status)}${escapeHtml(ptsText)}
                         </span>
                     </li>
                 `;
@@ -546,11 +555,11 @@
                 return `
                     <div onclick="inspectFromHistory(${idx})" class="p-3.5 rounded-xl bg-obsidian/75 border border-white/10 hover:border-blue-400/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer">
                         <div class="min-w-0">
-                            <div class="text-sm font-semibold text-white truncate">${item.url}</div>
-                            <div class="text-xs text-gray-400">${item.domain || ''} • Risk Score: ${item.risk_score}/100</div>
+                            <div class="text-sm font-semibold text-white truncate">${escapeHtml(item.url)}</div>
+                            <div class="text-xs text-gray-400">${escapeHtml(item.domain || '')} • Risk Score: ${Number(item.risk_score ?? 0)}/100</div>
                         </div>
                         <span class="px-3 py-1 rounded-full text-xs font-semibold border self-start sm:self-center ${badgeClass}">
-                            ${item.verdict}
+                            ${escapeHtml(item.verdict)}
                         </span>
                     </div>
                 `;
@@ -566,7 +575,7 @@
                 `"${String(i.domain || '').replace(/"/g, '""')}"`,
                 `"${String(i.ip || '').replace(/"/g, '""')}"`,
                 `"${String(i.insta_handle || '').replace(/"/g, '""')}"`,
-                i.risk_score ?? 0,
+                Number(i.risk_score ?? 0),
                 i.ml_scam_probability ?? '',
                 `"${String(i.verdict || '').replace(/"/g, '""')}"`,
                 `"${String(i.advice || '').replace(/"/g, '""')}"`
