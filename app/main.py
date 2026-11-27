@@ -16,9 +16,12 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 try:
-    from analyzer import analyze_store
+    from app.analyzer import analyze_store
 except ImportError:
-    analyze_store = None
+    try:
+        from analyzer import analyze_store
+    except ImportError:
+        analyze_store = None
 
 try:
     from app.database import (
@@ -142,7 +145,7 @@ def api_analyze_url(req: StoreScanRequest) -> Dict[str, Any]:
     if analyze_store is None:
         raise HTTPException(
             status_code=500,
-            detail="analyzer.py could not be imported. Ensure analyzer.py is in the project root.",
+            detail="analyzer.py could not be imported from app/analyzer.py or project root.",
         )
 
     domain_guess = normalize_domain(target_url)
